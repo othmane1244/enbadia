@@ -1,0 +1,1 @@
+# Embede AI — a project by O. A. and S. E. exploring embedded AI solutions
