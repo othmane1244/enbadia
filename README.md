@@ -1,1 +1,1 @@
-# Embede AI 
+# Embedded AI 
