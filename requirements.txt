@@ -1,0 +1,78 @@
+# ============================================================
+# Système de Surveillance Intelligente par Caméra
+# Raspberry Pi 5 + Hailo-8 — YOLO11n
+# ENSA Béni Mellal — IA & Cybersécurité 2025-2026
+# ============================================================
+
+# ------------------------------------------------------------
+# [1] IA / Vision — Modèle et inférence
+# ------------------------------------------------------------
+ultralytics==8.3.161          # YOLO11n : entraînement, export PT→ONNX
+onnx==1.16.2                  # Format ONNX standard (intermédiaire DFC)
+onnxruntime-directml>=1.19.0  # Inférence ONNX sur GPU via DirectML (Windows — RTX 5060, CUDA 13.x)
+# onnxruntime-gpu==1.19.2     # Alternative CUDA (ne supporte pas encore CUDA 13.x)
+# onnxruntime==1.19.2         # Alternative CPU si pas de GPU
+onnxsim==0.4.36               # Simplification du graphe ONNX (requis DFC)
+numpy==1.26.4                 # Calcul matriciel (compatible ultralytics)
+opencv-python==4.10.0.84      # Capture caméra, pre/post-traitement frames
+
+# ------------------------------------------------------------
+# [2] API Backend — FastAPI sur RPi 5 (développé sur PC)
+# ------------------------------------------------------------
+fastapi==0.115.5              # Framework API REST + WebSocket
+uvicorn[standard]==0.32.1     # Serveur ASGI pour FastAPI
+pydantic==2.9.2               # Validation des modèles de données
+pydantic-settings==2.6.1      # Gestion config via .env
+python-dotenv==1.0.1          # Chargement variables d'environnement (.env)
+websockets==13.1              # WebSocket client/server (alertes temps réel)
+httpx==0.27.2                 # Client HTTP async (tests API, appels internes)
+
+# ------------------------------------------------------------
+# [3] Base de données — Supabase (PostgreSQL cloud)
+# ------------------------------------------------------------
+supabase==2.9.1               # Client Python Supabase (REST + Realtime)
+postgrest==0.18.0             # Client PostgREST (inclus dans supabase)
+
+# ------------------------------------------------------------
+# [4] Tracking multi-objets (post-traitement CPU)
+# ------------------------------------------------------------
+lap==0.4.0                    # Algorithme d'assignation (requis BoT-SORT)
+scipy==1.14.1                 # Calculs scientifiques (distance, matching)
+
+# ------------------------------------------------------------
+# [5] Utilitaires
+# ------------------------------------------------------------
+Pillow==10.4.0                # Manipulation d'images (redimensionnement)
+requests==2.32.3              # Requêtes HTTP synchrones
+python-multipart==0.0.12      # Upload fichiers dans FastAPI
+aiofiles==24.1.0              # I/O fichiers async (streaming vidéo)
+
+# ------------------------------------------------------------
+# [6] Développement & Tests (non déployés sur RPi 5)
+# ------------------------------------------------------------
+pytest==8.3.3                 # Tests unitaires
+pytest-asyncio==0.24.0        # Tests async (endpoints FastAPI)
+httpx==0.27.2                 # Client HTTP pour tester FastAPI (TestClient)
+python-jose[cryptography]==3.3.0  # JWT (auth future si besoin)
+
+# ------------------------------------------------------------
+# NOTES D'INSTALLATION
+# ------------------------------------------------------------
+# Sur PC Windows (dev) — RTX 5060 / CUDA 13.x :
+#   python -m venv hailo_env
+#   hailo_env\Scripts\activate
+#   pip install -r requirements.txt
+#   → Utilise onnxruntime-directml (DirectX 12) — pas besoin de CUDA installé manuellement
+#   → Vérifier GPU actif : python -c "import onnxruntime as ort; print(ort.get_available_providers())"
+#
+# Sur RPi 5 (déploiement) :
+#   - Remplacer onnxruntime-gpu par HailoRT (installation séparée)
+#   - HailoRT 4.19+ : https://hailo.ai/developer-zone/
+#   - Supprimer les dépendances [6] (dev only)
+#   - pip install -r requirements.txt --extra-index-url <hailo_index>
+#
+# Hailo DFC (compilation ONNX→HEF) :
+#   - Requis uniquement pour la compilation (Linux recommandé)
+#   - hailo_dataflow_compiler-3.33.0 (wheel séparé, compte Hailo requis)
+#   - Alternative : Docker officiel Hailo DFC
+# ------------------------------------------------------------

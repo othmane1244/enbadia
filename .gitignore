@@ -1,0 +1,26 @@
+Latex/
+
+# Environnement Python
+hailo_env/
+__pycache__/
+*.pyc
+*.pyo
+
+# Variables d'environnement (NE JAMAIS publier)
+.env
+.env.local
+
+# Modèles (trop lourds pour GitHub)
+*.pt
+*.onnx
+*.hef
+
+# Screenshots webcam
+screenshot_*.jpg
+
+# Node.js (dashboard)
+node_modules/
+.next/
+
+# Claude Code (mémoire locale, ne pas publier)
+.claude/

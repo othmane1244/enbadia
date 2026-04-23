@@ -1,0 +1,28 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SYSTÈME DE SURVEILLANCE INTELLIGENTE PAR CAMÉRA AVEC ANALYSE COMPORTEMENTALE 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CONTEXTE :
+
+Les systèmes de vidéosurveillance traditionnels nécessitent une surveillance humaine constante et génèrent de nombreuses fausses alertes, ce qui limite leur efficacité et augmente les coûts opérationnels. L'évolution des techniques d'intelligence artificielle et des plateformes embarquées permet aujourd'hui de développer des solutions autonomes capables d'analyser les flux vidéo en temps réel et de détecter automatiquement des comportements anormaux ou dangereux.
+
+Ce type de système trouve des applications concrètes dans plusieurs domaines :
+• Sécurité des personnes âgées (détection de chutes à domicile)
+• Surveillance de locaux commerciaux ou industriels (détection d'intrusion)
+• Sécurité publique (détection d'objets abandonnés, comportements suspects)
+• Prévention d'incidents dans les espaces publics
+
+OBJECTIFS DU PROJET :
+
+1. Développer un système embarqué sur Raspberry Pi capable de détecter et classifier différents comportements à partir de flux vidéo en temps réel : intrusion dans des zones interdites, chute de personne, abandon d'objet, regroupement anormal, comportements suspects
+
+2. Optimiser des modèles de deep learning YOLO pour fonctionner en temps réel sur des ressources matérielles limitées, avec un objectif de performance ≥15 FPS
+
+3. Implémenter un système de tracking multi-objets permettant de suivre les personnes et objets entre les frames vidéo et d'analyser leurs trajectoires
+
+4. Créer un système d'alertes intelligent avec scoring de confiance pour minimiser les faux positifs et notifier en temps réel (notifications push, email, dashboard web)
+
+5. Assurer la confidentialité des données en effectuant tout le traitement localement sur le Raspberry Pi, avec possibilité de floutage automatique des visages
+
+Ce projet vous permettra d'acquérir des compétences en vision par ordinateur, optimisation de modèles IA pour l'embarqué, traitement temps réel, et développement de systèmes autonomes complets.
+
