@@ -1,22 +1,19 @@
-// ============================================================
-// components/AlertBadge.tsx — Badge type d'alerte
-// ============================================================
-
 interface AlertBadgeProps {
   type: string
 }
 
-const config: Record<string, { label: string; color: string }> = {
-  Intrusion:        { label: '🚨 Intrusion',        color: 'bg-red-100 text-red-800 border border-red-300' },
-  Chute:            { label: '🆘 Chute',             color: 'bg-orange-100 text-orange-800 border border-orange-300' },
-  Objet_Abandonne:  { label: '🎒 Objet Abandonné',  color: 'bg-yellow-100 text-yellow-800 border border-yellow-300' },
-  Attroupement:     { label: '👥 Attroupement',      color: 'bg-blue-100 text-blue-800 border border-blue-300' },
+const config: Record<string, { label: string; dot: string }> = {
+  Intrusion:       { label: 'Intrusion',        dot: 'bg-rose-500' },
+  Chute:           { label: 'Chute',            dot: 'bg-orange-500' },
+  Objet_Abandonne: { label: 'Objet abandonné',  dot: 'bg-amber-500' },
+  Attroupement:    { label: 'Attroupement',     dot: 'bg-sky-500' },
 }
 
 export default function AlertBadge({ type }: AlertBadgeProps) {
-  const c = config[type] ?? { label: type, color: 'bg-gray-100 text-gray-800 border border-gray-300' }
+  const c = config[type] ?? { label: type, dot: 'bg-zinc-500' }
   return (
-    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${c.color}`}>
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-300">
+      <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
       {c.label}
     </span>
   )

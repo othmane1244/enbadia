@@ -1,16 +1,40 @@
-// ============================================================
-// lib/supabase.ts — Client Supabase
-// Système de Surveillance Intelligente — ENSA Béni Mellal
-// ============================================================
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-import { createClient } from '@supabase/supabase-js'
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+export const isConfigured = Boolean(url && key)
 
-export const supabase = createClient(supabaseUrl, supabaseAnon)
+function createStub(): SupabaseClient {
+  const emptyQuery: any = {
+    select: () => emptyQuery,
+    order: () => emptyQuery,
+    limit: () => Promise.resolve({ data: [], error: null }),
+  }
+  const stubChannel: any = {
+    on: () => stubChannel,
+    subscribe: (cb?: (s: string) => void) => {
+      cb?.('CLOSED')
+      return stubChannel
+    },
+  }
+  return {
+    from: () => emptyQuery,
+    channel: () => stubChannel,
+    removeChannel: () => {},
+  } as unknown as SupabaseClient
+}
 
-// Types TypeScript pour la table alerts
+if (!isConfigured && typeof window === 'undefined') {
+  console.warn(
+    '[supabase] NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY missing — running in demo mode (no data).',
+  )
+}
+
+export const supabase: SupabaseClient = isConfigured
+  ? createClient(url!, key!)
+  : createStub()
+
 export interface Alert {
   id:               string
   created_at:       string
