@@ -1,0 +1,126 @@
+export type Lang = 'en' | 'fr'
+
+export const t = {
+  en: {
+    nav: {
+      overview: 'Overview',
+      logs: 'Logs',
+      videos: 'Videos',
+      analytics: 'Analytics',
+    },
+    live: 'Live',
+    offline: 'Offline',
+    demo: 'Demo',
+    stats: {
+      active: 'Active',
+      today: 'Today',
+      total: 'Total',
+    },
+    alerts: {
+      title: 'Recent alerts',
+      empty: 'No alerts',
+      waiting: 'Feed is active — waiting for detections.',
+      type: {
+        Intrusion: 'Intrusion',
+        Chute: 'Fall',
+        Objet_Abandonne: 'Abandoned object',
+        Attroupement: 'Crowd',
+      } as Record<string, string>,
+    },
+    rules: {
+      title: 'Detection rules',
+      items: [
+        { label: 'Intrusion',         dot: 'bg-rose-500',   detail: 'Presence in restricted area' },
+        { label: 'Fall',              dot: 'bg-orange-500', detail: 'Bounding box w/h ratio > 1.2' },
+        { label: 'Abandoned object',  dot: 'bg-amber-500',  detail: 'Isolated luggage (< 120 px)' },
+        { label: 'Crowd',             dot: 'bg-sky-500',    detail: '≥ 3 persons detected' },
+      ],
+    },
+    overview: {
+      title: 'Overview',
+      noAlerts: 'No active alerts.',
+      activeAlerts: (n: number) => `${n} active alert${n > 1 ? 's' : ''}.`,
+    },
+    logs: {
+      title: 'Logs',
+      all: 'All',
+      resolved: 'Resolved',
+      active: 'Active',
+      noResults: 'No alerts found.',
+      results: (n: number) => `${n} result${n === 1 ? '' : 's'}`,
+      columns: { type: 'Type', camera: 'Camera', time: 'Time', confidence: 'Confidence', status: 'Status' },
+    },
+    videos: {
+      title: 'Videos',
+      soon: 'Coming soon',
+      description: 'Video recordings will appear here once cameras are connected.',
+    },
+    analytics: {
+      title: 'Analytics',
+      byType: 'Alerts by type',
+      overTime: 'Alerts over time (7 days)',
+      noData: 'No data yet.',
+    },
+  },
+  fr: {
+    nav: {
+      overview: "Vue d'ensemble",
+      logs: 'Journaux',
+      videos: 'Vidéos',
+      analytics: 'Analytique',
+    },
+    live: 'En direct',
+    offline: 'Hors ligne',
+    demo: 'Démo',
+    stats: {
+      active: 'Actives',
+      today: "Aujourd'hui",
+      total: 'Total',
+    },
+    alerts: {
+      title: 'Alertes récentes',
+      empty: 'Aucune alerte',
+      waiting: 'Le flux est actif — en attente de détections.',
+      type: {
+        Intrusion: 'Intrusion',
+        Chute: 'Chute',
+        Objet_Abandonne: 'Objet abandonné',
+        Attroupement: 'Attroupement',
+      } as Record<string, string>,
+    },
+    rules: {
+      title: 'Règles de détection',
+      items: [
+        { label: 'Intrusion',        dot: 'bg-rose-500',   detail: 'Présence en zone interdite' },
+        { label: 'Chute',            dot: 'bg-orange-500', detail: 'Ratio bbox w/h > 1.2' },
+        { label: 'Objet abandonné',  dot: 'bg-amber-500',  detail: 'Bagage isolé (< 120 px)' },
+        { label: 'Attroupement',     dot: 'bg-sky-500',    detail: '≥ 3 personnes détectées' },
+      ],
+    },
+    overview: {
+      title: "Vue d'ensemble",
+      noAlerts: 'Aucune alerte active.',
+      activeAlerts: (n: number) => `${n} alerte${n > 1 ? 's' : ''} en cours.`,
+    },
+    logs: {
+      title: 'Journaux',
+      all: 'Tous',
+      resolved: 'Résolu',
+      active: 'Actif',
+      noResults: 'Aucune alerte trouvée.',
+      results: (n: number) => `${n} résultat${n === 1 ? '' : 's'}`,
+      columns: { type: 'Type', camera: 'Caméra', time: 'Heure', confidence: 'Confiance', status: 'Statut' },
+    },
+    videos: {
+      title: 'Vidéos',
+      soon: 'Bientôt disponible',
+      description: 'Les enregistrements vidéo apparaîtront ici une fois les caméras connectées.',
+    },
+    analytics: {
+      title: 'Analytique',
+      byType: 'Alertes par type',
+      overTime: 'Alertes dans le temps (7 jours)',
+      noData: 'Aucune donnée.',
+    },
+  },
+}

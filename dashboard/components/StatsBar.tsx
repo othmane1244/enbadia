@@ -1,10 +1,17 @@
+'use client'
+
 import { Alert } from '@/lib/supabase'
+import { useLang } from '@/lib/i18n'
+import { t } from '@/lib/translations'
 
 interface Props {
   alerts: Alert[]
 }
 
 export default function StatsBar({ alerts }: Props) {
+  const { lang } = useLang()
+  const tr = t[lang].stats
+
   const total = alerts.length
   const active = alerts.filter((a) => !a.is_resolved).length
   const today = alerts.filter((a) => {
@@ -18,13 +25,13 @@ export default function StatsBar({ alerts }: Props) {
   }).length
 
   const items = [
-    { label: 'Actives', value: active, accent: active > 0 },
-    { label: "Aujourd'hui", value: today, accent: false },
-    { label: 'Total', value: total, accent: false },
+    { label: tr.active, value: active, accent: active > 0 },
+    { label: tr.today,  value: today,  accent: false },
+    { label: tr.total,  value: total,  accent: false },
   ]
 
   return (
-    <div className="grid grid-cols-3 divide-x divide-zinc-900 overflow-hidden rounded-lg border border-zinc-900 bg-zinc-950">
+    <div className="grid grid-cols-3 divide-x divide-zinc-200 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 dark:divide-zinc-900 dark:border-zinc-900 dark:bg-zinc-950">
       {items.map((item) => (
         <div key={item.label} className="px-6 py-5">
           <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
@@ -32,7 +39,7 @@ export default function StatsBar({ alerts }: Props) {
           </div>
           <div
             className={`mt-2 text-3xl font-semibold tabular-nums tracking-tight ${
-              item.accent ? 'text-rose-400' : 'text-zinc-100'
+              item.accent ? 'text-rose-600 dark:text-rose-400' : 'text-zinc-900 dark:text-zinc-100'
             }`}
           >
             {item.value}
