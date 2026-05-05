@@ -60,8 +60,17 @@ if not cap.isOpened():
     print("❌ Erreur: Impossible d'accéder à la webcam!")
     exit()
 
+# Setup video writer
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+output_file = "posture_detection_output.mp4"
+out = cv2.VideoWriter(output_file, fourcc, fps, (width, height))
+
 print("\n🎥 Webcam active...")
 print("Placez-vous devant la caméra pour tester la posture")
+print(f"📹 Video sera sauvegardée dans: {output_file}")
 print("-" * 60)
 
 frame_count = 0
@@ -117,32 +126,35 @@ while True:
     cv2.putText(annotated, info_text, (10, 30),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-    # Affichage
-    cv2.imshow("Posture Detection - Supine/Not_Supine", annotated)
+    # Écrire dans le fichier vidéo
+    out.write(annotated)
 
-    # Gestion des touches
-    key = cv2.waitKey(1) & 0xFF
+    # Afficher le statut en console
+    if frame_count % 30 == 0:
+        print(f"📊 Frame {frame_count}: Supine={supine_count}, Not_Supine={not_supine_count}")
 
-    if key == ord('q'):
-        print("\n👋 Arrêt demandé par l'utilisateur")
+    # Gestion des touches (avec timeout court pour éviter blocage)
+    # Note: Sans imshow, on ne peut pas vraiment capturer les touches
+    # On va just continuer jusqu'à ce que la vidéo soit terminée
+    # Pour arrêter: Ctrl+C dans le terminal
+    
+    if frame_count >= 300:  # Limiter à 10 secondes à 30fps
+        print("\n⏱️  Durée max atteinte (10 secondes)")
         break
-
-    elif key == ord('s'):
-        filename = f"capture_posture_{frame_count}.jpg"
-        cv2.imwrite(filename, annotated)
-        print(f"💾 Capture sauvegardée: {filename}")
 
 # ============================================================
 # FIN
 # ============================================================
 
 cap.release()
-cv2.destroyAllWindows()
+out.release()
+# cv2.destroyAllWindows()  # Disabled: No GUI support on this system
 
 print("=" * 60)
 print("RÉSUMÉ DU TEST")
 print("=" * 60)
 print(f"🎞️  Frames analysées: {frame_count}")
 print(f"🛏️  Alerts Supine: {supine_alerts}")
+print(f"📹 Vidéo sauvegardée: {output_file}")
 print("✅ Test terminé")
 print("=" * 60)
