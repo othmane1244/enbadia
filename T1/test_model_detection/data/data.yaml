@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 2
+names: ['Not_Supine', 'Supine']
+
+roboflow:
+  workspace: akansha-bajpai-pyc15
+  project: posture-d3osc
+  version: 5
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/akansha-bajpai-pyc15/posture-d3osc/dataset/5
