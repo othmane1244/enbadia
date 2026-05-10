@@ -1,23 +1,18 @@
 # ============================================================
-# simulator.py — Simulateur pipeline RPi 5 sur PC
+# simulator.py — Simulateur pipeline RPi 5 avec YOLO + vidéo
 # Système de Surveillance Intelligente — ENSA Béni Mellal
 #
-# Remplace libcamera + HailoRT sur le PC de développement.
-# Capture webcam → ONNX → POST /process_frame/ → alertes
-#
-# Sur RPi 5 réel : remplacer ce fichier par le pipeline
-# libcamera → HailoRT → FastAPI client
+# Capture webcam → YOLO11n → Annotations → POST /video/frame
 # ============================================================
 
 import cv2
 import numpy as np
-import onnxruntime as ort
-import httpx
 import asyncio
-import time
-import logging
+import httpx
 import base64
+import logging
 from datetime import datetime, timezone
+from ultralytics import YOLO
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,188 +21,49 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ------------------------------------------------------------
 # CONFIG
-# ------------------------------------------------------------
-ONNX_MODEL      = "yolo11n.onnx"
-API_URL         = "http://127.0.0.1:8000/process_frame/"
+YOLO_MODEL = "yolo11n.pt"
+API_URL = "http://127.0.0.1:8000/process_frame/"
 VIDEO_FRAME_URL = "http://127.0.0.1:8000/video/frame"
-CAMERA_ID       = "cam_01_simulation"
-WEBCAM_ID       = 0
-INPUT_SIZE      = 640
-CONF_THRESH     = 0.45
-IOU_THRESH      = 0.45
-SEND_EVERY_N    = 1       # Envoyer 1 frame sur N à l'API (réduire charge réseau)
-DISPLAY_WINDOW  = True    # Afficher la fenêtre de prévisualisation
+CAMERA_ID = "cam_01_simulation"
+WEBCAM_ID = 0
+DISPLAY_WINDOW = True
+SEND_EVERY_N = 1
 
-CLASSES = [
-    "person","bicycle","car","motorcycle","airplane","bus","train","truck",
-    "boat","traffic light","fire hydrant","stop sign","parking meter","bench",
-    "bird","cat","dog","horse","sheep","cow","elephant","bear","zebra","giraffe",
-    "backpack","umbrella","handbag","tie","suitcase","frisbee","skis","snowboard",
-    "sports ball","kite","baseball bat","baseball glove","skateboard","surfboard",
-    "tennis racket","bottle","wine glass","cup","fork","knife","spoon","bowl",
-    "banana","apple","sandwich","orange","broccoli","carrot","hot dog","pizza",
-    "donut","cake","chair","couch","potted plant","bed","dining table","toilet",
-    "tv","laptop","mouse","remote","keyboard","cell phone","microwave","oven",
-    "toaster","sink","refrigerator","book","clock","vase","scissors","teddy bear",
-    "hair drier","toothbrush"
+# Couleurs YOLO par classe
+np.random.seed(42)
+COLORS = np.random.randint(0, 255, size=(80, 3), dtype=np.uint8)
+
+# État zones interdites (fictif - à mettre à jour depuis le backend)
+FORBIDDEN_ZONES = [
+    {"points": [(0.1, 0.1), (0.9, 0.1), (0.9, 0.3), (0.1, 0.3)], "name": "Zone Entrée"}
 ]
 
-np.random.seed(42)
-COLORS = np.random.randint(0, 255, size=(len(CLASSES), 3), dtype=np.uint8)
 
-
-# ------------------------------------------------------------
-# MODÈLE ONNX
-# ------------------------------------------------------------
-def load_model():
-    # DirectML : GPU Windows universel (RTX 5060, CUDA 13.x+, AMD, Intel)
-    # Pas de dépendance à la version CUDA — fonctionne via DirectX 12
-    providers = ["DmlExecutionProvider", "CPUExecutionProvider"]
-    session = ort.InferenceSession(ONNX_MODEL, providers=providers)
-    provider = session.get_providers()[0]
-    logger.info(f"✅ ONNX chargé — Provider : {provider}")
-    if provider == "CPUExecutionProvider":
-        logger.warning("⚠️  GPU non détecté — inférence sur CPU (vérifier onnxruntime-directml)")
-    return session
-
-
-# ------------------------------------------------------------
-# PRÉ-TRAITEMENT (identique au pipeline RPi 5)
-# ------------------------------------------------------------
-def preprocess(frame):
-    h, w = frame.shape[:2]
-    ratio = min(INPUT_SIZE / w, INPUT_SIZE / h)
-    new_w, new_h = int(w * ratio), int(h * ratio)
-    resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
-    pad_w = (INPUT_SIZE - new_w) // 2
-    pad_h = (INPUT_SIZE - new_h) // 2
-    padded = cv2.copyMakeBorder(
-        resized, pad_h, INPUT_SIZE - new_h - pad_h,
-        pad_w, INPUT_SIZE - new_w - pad_w,
-        cv2.BORDER_CONSTANT, value=(114, 114, 114)
-    )
-    blob = padded[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
-    blob = np.expand_dims(blob, axis=0)
-    return blob, ratio, pad_w, pad_h
-
-
-# ------------------------------------------------------------
-# POST-TRAITEMENT + FORMATAGE JSON pour l'API
-# ------------------------------------------------------------
-def postprocess_to_api_format(output, ratio, pad_w, pad_h, orig_w, orig_h):
-    """
-    Convertit la sortie ONNX en format FrameData attendu par l'API.
-    Retourne une liste de dicts Detection compatibles Pydantic.
-    """
-    predictions = output[0].T
-    boxes, scores, class_ids = [], [], []
-
-    for pred in predictions:
-        cx, cy, bw, bh = pred[:4]
-        class_probs = pred[4:]
-        class_id = int(np.argmax(class_probs))
-        confidence = float(class_probs[class_id])
-        if confidence < CONF_THRESH:
-            continue
-        x1 = max(0, int((cx - bw / 2 - pad_w) / ratio))
-        y1 = max(0, int((cy - bh / 2 - pad_h) / ratio))
-        x2 = min(orig_w, int((cx + bw / 2 - pad_w) / ratio))
-        y2 = min(orig_h, int((cy + bh / 2 - pad_h) / ratio))
-        boxes.append([x1, y1, x2 - x1, y2 - y1])
-        scores.append(confidence)
-        class_ids.append(class_id)
-
-    if not boxes:
-        return []
-
-    indices = cv2.dnn.NMSBoxes(boxes, scores, CONF_THRESH, IOU_THRESH)
-    detections = []
-    for i in indices.flatten():
-        x, y, w, h = boxes[i]
-        detections.append({
-            "track_id":   int(i),                    
-            "class_id":   int(class_ids[i]),       
-            "class_name": CLASSES[int(class_ids[i])],
-            "confidence": round(float(scores[i]), 3), 
-            "bbox": {
-                "x1": int(x),                       
-                "y1": int(y),                        
-                "x2": int(x + w),                    
-                "y2": int(y + h),                   
-            }
-        })
-    return detections
-
-def prepare_detections(results) -> list[dict]:
-    """Convertit les résultats YOLO en format API avec types Python natifs."""
-    detections = []
-    
-    for box in results.boxes:
-        # ✅ Convertir int32 → int natif Python
-        x1, y1, x2, y2 = map(int, box.xyxy[0])
-        class_id = int(box.cls[0])
-        confidence = float(box.conf[0])
-        track_id = int(box.id[0]) if box.id is not None else None
+async def send_video_frame(client: httpx.AsyncClient, frame: cv2.Mat, frame_id: int) -> bool:
+    """Envoie une frame JPEG base64 au backend."""
+    try:
+        ret, jpeg_data = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not ret:
+            logger.error("Impossible d'encoder la frame en JPEG")
+            return False
         
-        detection = {
-            "track_id": track_id,
-            "class_id": class_id,
-            "class_name": results.names[class_id],
-            "confidence": confidence,
-            "bbox": {
-                "x1": x1,       # ✅ int natif (pas int32)
-                "y1": y1,
-                "x2": x2,
-                "y2": y2
-            }
+        base64_frame = base64.b64encode(jpeg_data.tobytes()).decode('utf-8')
+        
+        payload = {
+            "frame_id": frame_id,
+            "camera_id": CAMERA_ID,
+            "data": base64_frame,
         }
-        detections.append(detection)
-    
-    return detections
-
-# ------------------------------------------------------------
-# AFFICHAGE
-# ------------------------------------------------------------
-def draw_frame(frame, detections, fps, api_alerts_count, frame_id):
-    for det in detections:
-        bb = det["bbox"]
-        x1, y1, x2, y2 = bb["x1"], bb["y1"], bb["x2"], bb["y2"]
-        cls_id = det["class_id"]
-        label  = f"{det['class_name']} {det['confidence']:.2f}"
-        color  = tuple(int(c) for c in COLORS[cls_id])
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), color, -1)
-        cv2.putText(frame, label, (x1 + 2, y1 - 4),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
-    h, w = frame.shape[:2]
-    overlay = frame.copy()
-    cv2.rectangle(overlay, (0, 0), (w, 44), (0, 0, 0), -1)
-    frame = cv2.addWeighted(overlay, 0.55, frame, 0.45, 0)
-    cv2.putText(frame, f"FPS: {fps:.1f}", (10, 28),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    cv2.putText(frame, f"Det: {len(detections)}", (120, 28),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 255), 2)
-    cv2.putText(frame, f"Alertes API: {api_alerts_count}", (230, 28),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 100, 255), 2)
-    cv2.putText(frame, f"Frame: {frame_id}", (430, 28),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (180, 180, 180), 1)
-    cv2.putText(frame, "[SIMULATION PC — Remplace libcamera + HailoRT sur RPi 5]",
-                (8, h - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (160, 160, 160), 1)
-    return frame
+        resp = await client.post(VIDEO_FRAME_URL, json=payload, timeout=1.0)
+        return resp.status_code == 200
+    except Exception as e:
+        logger.error(f"Erreur envoi frame : {e}")
+        return False
 
 
-# ------------------------------------------------------------
-# ENVOI À L'API (async)
-# ------------------------------------------------------------
-async def send_to_api(client: httpx.AsyncClient, frame_data: dict) -> int:
-    """
-    Envoie un FrameData JSON à POST /process_frame/.
-    Retourne le nombre d'alertes générées.
-    """
+async def send_detections_to_api(client: httpx.AsyncClient, frame_data: dict) -> int:
+    """Envoie les détections à l'API pour analyse comportementale."""
     try:
         resp = await client.post(API_URL, json=frame_data, timeout=2.0)
         if resp.status_code == 200:
@@ -224,66 +80,107 @@ async def send_to_api(client: httpx.AsyncClient, frame_data: dict) -> int:
         else:
             logger.error(f"API erreur {resp.status_code}")
             return 0
-    except httpx.ConnectError:
-        logger.warning("⚠️  API non joignable — lance uvicorn d'abord !")
-        return 0
     except Exception as e:
-        logger.error(f"Erreur envoi API : {e}")
+        logger.error(f"Erreur envoi détections : {e}")
         return 0
 
 
-async def send_video_frame(client: httpx.AsyncClient, frame: np.ndarray, frame_id: int) -> bool:
-    """
-    Envoie une frame annotée en JPEG base64 via POST /video/frame.
-    Le backend la broadcast aux clients WebSocket /ws/video.
-    """
-    try:
-        # Encoder frame en JPEG
-        ret, jpeg_data = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        if not ret:
-            logger.error("Impossible d'encoder la frame en JPEG")
-            return False
+def draw_annotations(frame, results, frame_id):
+    """Dessine les détections YOLO et les zones interdites sur le frame."""
+    h, w = frame.shape[:2]
+    
+    # Dessiner les zones interdites
+    for zone in FORBIDDEN_ZONES:
+        points = zone["points"]
+        pts = np.array(
+            [(int(p[0] * w), int(p[1] * h)) for p in points],
+            dtype=np.int32
+        )
+        cv2.polylines(frame, [pts], True, (0, 0, 255), 2)
         
-        # Convertir en base64
-        base64_frame = base64.b64encode(jpeg_data.tobytes()).decode('utf-8')
+        # Remplissage semi-transparent
+        overlay = frame.copy()
+        cv2.fillPoly(overlay, [pts], (0, 0, 255))
+        frame = cv2.addWeighted(overlay, 0.15, frame, 0.85, 0)
         
-        # Envoyer au backend
-        payload = {
-            "frame_id": frame_id,
-            "camera_id": CAMERA_ID,
-            "data": base64_frame,
-        }
-        resp = await client.post(VIDEO_FRAME_URL, json=payload, timeout=1.0)
-        return resp.status_code == 200
-    except Exception as e:
-        logger.error(f"Erreur envoi frame vidéo : {e}")
-        return False
+        # Label zone
+        center_x = int(np.mean([p[0] for p in points]) * w)
+        center_y = int(np.mean([p[1] for p in points]) * h)
+        cv2.putText(
+            frame, f"🚫 {zone['name']}", (center_x - 50, center_y),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2
+        )
+    
+    # Dessiner les détections
+    if results and len(results) > 0 and results[0].boxes is not None:
+        boxes = results[0].boxes
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            cls_id = int(box.cls[0])
+            confidence = float(box.conf[0])
+            class_name = results[0].names[cls_id]
+            
+            # Couleur par classe
+            color = tuple(int(c) for c in COLORS[cls_id])
+            
+            # BBox
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            
+            # Label avec confiance
+            label = f"{class_name} {confidence:.2f}"
+            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), color, -1)
+            cv2.putText(
+                frame, label, (x1 + 2, y1 - 4),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1
+            )
+    
+    # Overlay info
+    overlay = frame.copy()
+    h, w = frame.shape[:2]
+    cv2.rectangle(overlay, (0, 0), (w, 50), (0, 0, 0), -1)
+    frame = cv2.addWeighted(overlay, 0.55, frame, 0.45, 0)
+    
+    cv2.putText(frame, f"Frame #{frame_id}", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+    
+    if results and len(results) > 0 and results[0].boxes is not None:
+        n_det = len(results[0].boxes)
+        cv2.putText(frame, f"Détections: {n_det}", (250, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 255), 2)
+    
+    return frame
 
 
-# ------------------------------------------------------------
-# BOUCLE PRINCIPALE
-# ------------------------------------------------------------
 async def main():
-    logger.info("=== Simulateur Pipeline RPi 5 ===")
-    logger.info(f"  ONNX     : {ONNX_MODEL}")
-    logger.info(f"  API      : {API_URL}")
-    logger.info(f"  Caméra   : {CAMERA_ID}")
+    logger.info("=== Simulateur YOLO + Vidéo ===")
+    logger.info(f"  Modèle YOLO: {YOLO_MODEL}")
+    logger.info(f"  API Détections: {API_URL}")
+    logger.info(f"  Caméra: {CAMERA_ID}")
     logger.info("  [Q] pour quitter\n")
 
-    session    = load_model()
-    input_name = session.get_inputs()[0].name
+    # Charger le modèle YOLO
+    try:
+        model = YOLO(YOLO_MODEL)
+        logger.info(f"✅ Modèle YOLO chargé: {YOLO_MODEL}")
+    except Exception as e:
+        logger.error(f"❌ Erreur chargement modèle YOLO: {e}")
+        logger.info("  Utilisation du mode vidéo sans détections...")
+        model = None
 
+    # Ouvrir la webcam
     cap = cv2.VideoCapture(WEBCAM_ID)
     if not cap.isOpened():
         logger.error(f"❌ Webcam introuvable (ID={WEBCAM_ID})")
         return
+    
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     logger.info(f"✅ Webcam ouverte : {int(cap.get(3))}x{int(cap.get(4))}")
 
-    fps            = 0.0
-    frame_id       = 0
-    api_alerts_acc = 0
+    frame_id = 0
+    frames_sent = 0
+    api_alerts = 0
 
     async with httpx.AsyncClient() as client:
         while True:
@@ -292,45 +189,74 @@ async def main():
                 break
 
             orig_h, orig_w = frame.shape[:2]
-            t0 = time.perf_counter()
 
-            # ── Pipeline inférence ──
-            blob, ratio, pad_w, pad_h = preprocess(frame)
-            outputs     = session.run(None, {input_name: blob})
-            detections  = postprocess_to_api_format(
-                outputs[0], ratio, pad_w, pad_h, orig_w, orig_h
-            )
+            # Inférence YOLO (si modèle disponible)
+            results = None
+            detections = []
+            if model is not None:
+                try:
+                    results = model(frame, verbose=False)
+                    
+                    # Extraire les détections au format API
+                    if results and len(results) > 0 and results[0].boxes is not None:
+                        for box in results[0].boxes:
+                            x1, y1, x2, y2 = map(int, box.xyxy[0])
+                            cls_id = int(box.cls[0])
+                            confidence = float(box.conf[0])
+                            
+                            detections.append({
+                                "track_id": None,
+                                "class_id": cls_id,
+                                "class_name": results[0].names[cls_id],
+                                "confidence": confidence,
+                                "bbox": {
+                                    "x1": x1,
+                                    "y1": y1,
+                                    "x2": x2,
+                                    "y2": y2,
+                                }
+                            })
+                except Exception as e:
+                    logger.warning(f"⚠️ Erreur inférence YOLO: {e}")
 
-            fps = 0.9 * fps + 0.1 * (1.0 / (time.perf_counter() - t0 + 1e-6))
+            # Dessiner les annotations
+            display = draw_annotations(frame.copy(), results, frame_id)
 
-            # ── Envoi à l'API (1 frame sur SEND_EVERY_N) ──
+            # Envoyer la frame annotée
+            success = await send_video_frame(client, display, frame_id)
+            if success:
+                frames_sent += 1
+                if frames_sent % 30 == 0:
+                    logger.info(f"📹 {frames_sent} frames envoyées")
+
+            # Envoyer les détections à l'API (1 sur SEND_EVERY_N)
             if frame_id % SEND_EVERY_N == 0 and detections:
                 frame_payload = {
-                    "camera_id":  CAMERA_ID,
-                    "frame_id":   frame_id,
-                    "timestamp":  datetime.now(timezone.utc).isoformat(),
-                    "fps":        round(fps, 2),
+                    "camera_id": CAMERA_ID,
+                    "frame_id": frame_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "fps": 30.0,
                     "detections": detections,
                 }
-                n_alerts = await send_to_api(client, frame_payload)
-                api_alerts_acc += n_alerts
+                n_alerts = await send_detections_to_api(client, frame_payload)
+                api_alerts += n_alerts
 
-            # ── Envoi vidéo annotée au dashboard ──
+            # Afficher localement
             if DISPLAY_WINDOW:
-                display = draw_frame(frame, detections, fps, api_alerts_acc, frame_id)
-                await send_video_frame(client, display, frame_id)
-                cv2.imshow("Simulateur — RPi5 + Hailo-8 (PC)", display)
+                cv2.imshow("Simulateur YOLO", display)
 
             frame_id += 1
+
+            # Attendre 33ms = ~30 FPS
+            await asyncio.sleep(0.033)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
     cap.release()
     cv2.destroyAllWindows()
-    logger.info(f"\n✅ Simulation terminée — {frame_id} frames, {api_alerts_acc} alertes")
+    logger.info(f"\n✅ Simulation terminée — {frame_id} frames, {frames_sent} envoyées, {api_alerts} alertes")
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-    

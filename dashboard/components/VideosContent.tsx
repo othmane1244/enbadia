@@ -155,10 +155,10 @@ export default function VideosContent() {
       </div>
 
       {/* Contrôles enregistrement */}
-      <div className="border-t border-zinc-200 bg-white px-8 py-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex items-center justify-between">
-          {/* Messages */}
-          <div className="flex items-center gap-4">
+      <div className="border-t border-zinc-200 bg-white px-8 py-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex flex-col gap-4">
+          {/* Messages - ligne 1 */}
+          <div className="flex flex-wrap items-center gap-3">
             {error && (
               <div className="rounded bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
                 ⚠️ {error}
@@ -179,21 +179,21 @@ export default function VideosContent() {
             )}
           </div>
 
-          {/* Boutons */}
+          {/* Boutons - ligne 2 */}
           <div className="flex gap-3">
             <button
               onClick={handleStartRecording}
               disabled={!isConnected || isRecording}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-600"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-600"
             >
-              Enregistrer
+              ⏺️ Enregistrer
             </button>
             <button
               onClick={handleStopRecording}
               disabled={!isRecording}
-              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-500 dark:hover:bg-red-600"
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-2 font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-500 dark:hover:bg-red-600"
             >
-              Stopper
+              ⏹️ Stopper
             </button>
           </div>
         </div>
