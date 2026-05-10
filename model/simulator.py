@@ -220,7 +220,7 @@ async def main():
             detections = []
             if model is not None:
                 try:
-                    results = model(frame, verbose=False)
+                    results = model.track(frame, persist=True, verbose=False)
                     
                     # Extraire les détections au format API
                     if results and len(results) > 0 and results[0].boxes is not None:
@@ -230,7 +230,7 @@ async def main():
                             confidence = float(box.conf[0])
                             
                             detections.append({
-                                "track_id": None,
+                                "track_id": int(box.id[0]) if box.id is not None else None,
                                 "class_id": cls_id,
                                 "class_name": results[0].names[cls_id],
                                 "confidence": confidence,
