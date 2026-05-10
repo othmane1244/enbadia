@@ -3,7 +3,12 @@
 # Système de Surveillance Intelligente — ENSA Béni Mellal
 #
 # Capture webcam → YOLO11n → Annotations → POST /video/frame
+# Zones interdites chargées depuis Supabase
 # ============================================================
+
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import cv2
 import numpy as np
@@ -13,6 +18,7 @@ import base64
 import logging
 from datetime import datetime, timezone
 from ultralytics import YOLO
+from database import fetch_zones
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,10 +40,9 @@ SEND_EVERY_N = 1
 np.random.seed(42)
 COLORS = np.random.randint(0, 255, size=(80, 3), dtype=np.uint8)
 
-# État zones interdites (fictif - à mettre à jour depuis le backend)
-FORBIDDEN_ZONES = [
-    {"points": [(0.1, 0.1), (0.9, 0.1), (0.9, 0.3), (0.1, 0.3)], "name": "Zone Entrée"}
-]
+# Zones interdites — chargées depuis Supabase au démarrage
+# (voir async main() ci-dessous)
+FORBIDDEN_ZONES = []
 
 
 async def send_video_frame(client: httpx.AsyncClient, frame: cv2.Mat, frame_id: int) -> bool:
@@ -85,29 +90,42 @@ async def send_detections_to_api(client: httpx.AsyncClient, frame_data: dict) ->
         return 0
 
 
-def draw_annotations(frame, results, frame_id):
+def draw_annotations(frame, results, frame_id, zones=None):
     """Dessine les détections YOLO et les zones interdites sur le frame."""
+    if zones is None:
+        zones = []
+    
     h, w = frame.shape[:2]
     
     # Dessiner les zones interdites
-    for zone in FORBIDDEN_ZONES:
-        points = zone["points"]
+    for zone in zones:
+        points = zone.get("points", [])
+        if not points:
+            continue
+            
         pts = np.array(
-            [(int(p[0] * w), int(p[1] * h)) for p in points],
+            [(int(p["x"] * w) if isinstance(p, dict) else int(p[0] * w), 
+              int(p["y"] * h) if isinstance(p, dict) else int(p[1] * h)) 
+             for p in points],
             dtype=np.int32
         )
+        if len(pts) < 2:
+            continue
+            
         cv2.polylines(frame, [pts], True, (0, 0, 255), 2)
         
         # Remplissage semi-transparent
-        overlay = frame.copy()
-        cv2.fillPoly(overlay, [pts], (0, 0, 255))
-        frame = cv2.addWeighted(overlay, 0.15, frame, 0.85, 0)
+        if len(pts) >= 3:
+            overlay = frame.copy()
+            cv2.fillPoly(overlay, [pts], (0, 0, 255))
+            frame = cv2.addWeighted(overlay, 0.15, frame, 0.85, 0)
         
         # Label zone
-        center_x = int(np.mean([p[0] for p in points]) * w)
-        center_y = int(np.mean([p[1] for p in points]) * h)
+        center_x = int(np.mean([p["x"] * w if isinstance(p, dict) else p[0] * w for p in points]))
+        center_y = int(np.mean([p["y"] * h if isinstance(p, dict) else p[1] * h for p in points]))
+        zone_label = zone.get("name", "Zone Interdite")
         cv2.putText(
-            frame, f"🚫 {zone['name']}", (center_x - 50, center_y),
+            frame, f"🚫 {zone_label}", (center_x - 50, center_y),
             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2
         )
     
@@ -158,6 +176,13 @@ async def main():
     logger.info(f"  API Détections: {API_URL}")
     logger.info(f"  Caméra: {CAMERA_ID}")
     logger.info("  [Q] pour quitter\n")
+
+    # Charger les zones depuis Supabase
+    zones = await fetch_zones(CAMERA_ID)
+    if zones:
+        logger.info(f"✅ {len(zones)} zone(s) interdite(s) chargée(s) de Supabase")
+    else:
+        logger.warning("⚠️  Aucune zone chargée — vérifier Supabase ou créer des zones via le dashboard")
 
     # Charger le modèle YOLO
     try:
@@ -219,8 +244,8 @@ async def main():
                 except Exception as e:
                     logger.warning(f"⚠️ Erreur inférence YOLO: {e}")
 
-            # Dessiner les annotations
-            display = draw_annotations(frame.copy(), results, frame_id)
+            # Dessiner les annotations (zones + détections)
+            display = draw_annotations(frame.copy(), results, frame_id, zones=zones)
 
             # Envoyer la frame annotée
             success = await send_video_frame(client, display, frame_id)

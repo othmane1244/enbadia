@@ -248,6 +248,46 @@ async def insert_zone(zone: ZoneCreate) -> bool:
         return False
 
 
+async def fetch_zones(camera_id: str = None) -> list[dict]:
+    """
+    Récupère les zones actives depuis Supabase.
+    Format retourné : [{"name": str, "points": [(x, y), ...], "camera_id": str}, ...]
+    Chaque point est en coordonnées normalisées (0.0-1.0).
+    Si camera_id est None, retourne toutes les zones actives.
+    """
+    if _supabase is None:
+        logger.warning("⚠️  Supabase indisponible — aucune zone chargée")
+        return []
+
+    try:
+        loop = asyncio.get_event_loop()
+        
+        def query_zones():
+            q = _supabase.table("zones").select("*").eq("active", True)
+            if camera_id:
+                q = q.eq("camera_id", camera_id)
+            return q.execute()
+        
+        response = await loop.run_in_executor(None, query_zones)
+        zones = response.data if response.data else []
+        
+        formatted = []
+        for z in zones:
+            formatted.append({
+                "name": z.get("zone_name", "Zone"),
+                "points": z.get("points", []),
+                "camera_id": z.get("camera_id", ""),
+                "zone_id": z.get("id"),
+            })
+        
+        logger.info(f"✅ {len(formatted)} zone(s) chargée(s) de Supabase")
+        return formatted
+        
+    except Exception as e:
+        logger.error(f"❌ Erreur récupération zones Supabase : {e}")
+        return []
+
+
 async def broadcast_alert(alert: Alert):
     """
     Envoie l'alerte à tous les clients WebSocket connectés.
