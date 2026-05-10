@@ -89,3 +89,12 @@ class ProcessFrameResponse(BaseModel):
     detections_count: int
     alerts_generated: list[Alert]
     processing_time_ms: float
+
+
+class ZoneCreate(BaseModel):
+    """Données envoyées par le dashboard pour enregistrer une zone."""
+    camera_id: str = Field(..., min_length=1)
+    zone_name: str = Field(default='Zone Interdite', min_length=1)
+    points: list[dict[str, float]] = Field(default_factory=list)
+    active: bool = True
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

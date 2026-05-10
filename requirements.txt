@@ -46,6 +46,7 @@ Pillow==10.4.0                # Manipulation d'images (redimensionnement)
 requests==2.32.3              # Requêtes HTTP synchrones
 python-multipart==0.0.12      # Upload fichiers dans FastAPI
 aiofiles==24.1.0              # I/O fichiers async (streaming vidéo)
+psutil==5.9.6                 # Monitoring CPU / disque (watchdog)
 
 # ------------------------------------------------------------
 # [6] Développement & Tests (non déployés sur RPi 5)
