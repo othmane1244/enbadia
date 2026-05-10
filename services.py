@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 ZONE_INTERDITE = (0.0, 0.0, 0.4, 1.0)   # 40% gauche de l'image
 
 # Seuils comportementaux
-FALL_RATIO_THRESHOLD     = 1.2    # Ratio w/h > 1.2 → personne allongée
+FALL_RATIO_THRESHOLD     = 1.5    # Ratio w/h > 1.5 → personne allongée (plus strict pour réduire faux+)
 CROWD_MIN_PERSONS        = 3     # Nombre min de personnes → attroupement
 ABANDONED_OBJECT_DIST    = 120    # px — distance max objet/personne → "proche"
 CONFIDENCE_MIN_DETECTION = 0.45   # Seuil confiance détection YOLO
@@ -28,6 +28,10 @@ CONFIDENCE_MIN_DETECTION = 0.45   # Seuil confiance détection YOLO
 PERSON_CLASS    = 0
 BAG_CLASSES     = {24, 26, 28}    # backpack, handbag, suitcase
 VEHICLE_CLASSES = {1, 2, 3, 5, 7} # bicycle, car, motorcycle, bus, truck
+
+# Timer temporel par personne pour confirmer une chute avant alerte.
+FALL_CONFIRMATION_SECONDS = 10
+FALL_TRACK_TIMERS: dict[int, dict[str, object]] = {}
 
 
 # ------------------------------------------------------------
@@ -85,7 +89,11 @@ def detect_intrusion(detections: list[Detection], camera_id: str) -> list[Alert]
     return alerts
 
 
-def detect_fall(detections: list[Detection], camera_id: str) -> list[Alert]:
+def detect_fall(
+    detections: list[Detection],
+    camera_id: str,
+    frame_timestamp,
+) -> list[Alert]:
     """
     Règle 2 — Chute possible :
     Une personne dont le ratio bbox w/h dépasse FALL_RATIO_THRESHOLD.
@@ -98,24 +106,82 @@ def detect_fall(detections: list[Detection], camera_id: str) -> list[Alert]:
                and d.confidence >= CONFIDENCE_MIN_DETECTION]
 
     for person in persons:
+        if person.track_id is None:
+            logger.info("ℹ️ Chute ignorée — track_id manquant")
+            continue
+
         ratio = person.bbox.aspect_ratio
-        if ratio > FALL_RATIO_THRESHOLD:
-            # Score de confiance pondéré par la conf YOLO et le ratio
-            conf = min(1.0, round(person.confidence * (ratio / 2.0), 3))
-            alerts.append(Alert(
-                camera_id        = camera_id,
-                alert_type       = AlertType.CHUTE,
-                description      = (
-                    f"Chute possible — ratio w/h={ratio:.2f} "
-                    f"(seuil={FALL_RATIO_THRESHOLD}) "
-                    f"[track_id={person.track_id}]"
-                ),
-                confidence_score = conf,
-                detection_info   = [person],
-            ))
+
+        # Phase 1 strict : vérifier d'abord le ratio puis exiger
+        # une confirmation de posture `Supine` fournie par T1.
+        if ratio <= FALL_RATIO_THRESHOLD:
+            FALL_TRACK_TIMERS.pop(person.track_id, None)
+            continue
+
+        posture_raw = person.posture_label
+        posture_label = (posture_raw or "").strip().lower()
+        posture_is_supine = posture_label == "supine"
+
+        # Si aucune info de posture (N/A) — LOG uniquement, pas d'alerte
+        if not posture_raw:
+            FALL_TRACK_TIMERS.pop(person.track_id, None)
             logger.warning(
-                f"🚨 CHUTE possible — track_id={person.track_id} ratio={ratio:.2f}"
+                f"⚠️ Posture N/A — Chute non confirmée, track_id={person.track_id} "
+                f"ratio={ratio:.2f}"
             )
+            continue
+
+        # Si posture fournie mais pas 'Supine' — ignorer (non allongé)
+        if not posture_is_supine:
+            FALL_TRACK_TIMERS.pop(person.track_id, None)
+            logger.info(
+                f"ℹ️ Chute ignorée — track_id={person.track_id} "
+                f"ratio={ratio:.2f} posture={person.posture_label}"
+            )
+            continue
+
+        timer_state = FALL_TRACK_TIMERS.get(person.track_id)
+        if timer_state is None:
+            FALL_TRACK_TIMERS[person.track_id] = {
+                "start_timestamp": frame_timestamp,
+                "last_timestamp": frame_timestamp,
+            }
+            logger.info(
+                f"⏱️ Timer chute démarré — track_id={person.track_id} "
+                f"ratio={ratio:.2f} posture={person.posture_label}"
+            )
+            continue
+
+        timer_state["last_timestamp"] = frame_timestamp
+        start_timestamp = timer_state["start_timestamp"]
+        elapsed_seconds = (frame_timestamp - start_timestamp).total_seconds()
+
+        if elapsed_seconds < FALL_CONFIRMATION_SECONDS:
+            logger.info(
+                f"⏱️ Timer chute en cours — track_id={person.track_id} "
+                f"{elapsed_seconds:.1f}s/{FALL_CONFIRMATION_SECONDS}s"
+            )
+            continue
+
+        # Si on arrive ici : ratio > seuil, posture == Supine et timer >= 10s.
+        conf = min(1.0, round(person.confidence * (ratio / 2.0), 3))
+        alerts.append(Alert(
+            camera_id        = camera_id,
+            alert_type       = AlertType.CHUTE,
+            description      = (
+                f"Chute confirmée — ratio w/h={ratio:.2f} "
+                f"(seuil={FALL_RATIO_THRESHOLD}) "
+                f"[posture={person.posture_label or 'N/A'}] "
+                f"[track_id={person.track_id}]"
+            ),
+            confidence_score = conf,
+            detection_info   = [person],
+        ))
+        FALL_TRACK_TIMERS.pop(person.track_id, None)
+        logger.warning(
+            f"🚨 CHUTE confirmée — track_id={person.track_id} "
+            f"ratio={ratio:.2f} durée={elapsed_seconds:.1f}s"
+        )
 
     return alerts
 
@@ -237,7 +303,7 @@ def analyze_behavior(frame_data: FrameData) -> list[Alert]:
 
 
     all_alerts += detect_intrusion(detections, camera_id)
-    all_alerts += detect_fall(detections, camera_id)
+    all_alerts += detect_fall(detections, camera_id, frame_data.timestamp)
     all_alerts += detect_abandoned_object(detections, camera_id)
     all_alerts += detect_crowd(detections, camera_id)
 

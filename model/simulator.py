@@ -17,6 +17,7 @@ import asyncio
 import time
 import logging
 from datetime import datetime, timezone
+from ultralytics import YOLO
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,6 +30,9 @@ logger = logging.getLogger(__name__)
 # CONFIG
 # ------------------------------------------------------------
 ONNX_MODEL      = "yolo11n.onnx"
+YOLO_PT_MODEL   = "yolo11n.pt"
+TRACKER_CONFIG  = "botsort.yaml"
+T1_MODEL_PATH   = "T1/test_model_detection/weights/best.pt"
 API_URL         = "http://127.0.0.1:8000/process_frame/"
 CAMERA_ID       = "cam_01_simulation"
 WEBCAM_ID       = 0
@@ -37,6 +41,8 @@ CONF_THRESH     = 0.45
 IOU_THRESH      = 0.45
 SEND_EVERY_N    = 1       # Envoyer 1 frame sur N à l'API (réduire charge réseau)
 DISPLAY_WINDOW  = True    # Afficher la fenêtre de prévisualisation
+USE_BOTSORT     = True    # True: tracking réel via model.track(), False: pipeline ONNX
+USE_T1_POSTURE  = True    # True: annote les personnes avec Supine/Not_Supine
 
 CLASSES = [
     "person","bicycle","car","motorcycle","airplane","bus","train","truck",
@@ -69,6 +75,31 @@ def load_model():
     if provider == "CPUExecutionProvider":
         logger.warning("⚠️  GPU non détecté — inférence sur CPU (vérifier onnxruntime-directml)")
     return session
+
+
+def load_tracking_model() -> YOLO | None:
+    """Charge le modèle PyTorch pour activer le tracking BoT-SORT."""
+    try:
+        model = YOLO(YOLO_PT_MODEL)
+        logger.info(f"✅ Mode tracking activé — modèle: {YOLO_PT_MODEL} ({TRACKER_CONFIG})")
+        return model
+    except Exception as e:
+        logger.error(f"❌ Impossible de charger {YOLO_PT_MODEL} pour BoT-SORT: {e}")
+        logger.warning("↩️  Fallback automatique vers le mode ONNX sans tracking persistant")
+        return None
+
+
+def load_posture_model() -> YOLO | None:
+    """Charge le modèle T1 Supine/Not_Supine si disponible."""
+    if not USE_T1_POSTURE:
+        return None
+    try:
+        model = YOLO(T1_MODEL_PATH)
+        logger.info(f"✅ Modèle T1 posture chargé: {T1_MODEL_PATH}")
+        return model
+    except Exception as e:
+        logger.warning(f"⚠️  T1 posture indisponible ({T1_MODEL_PATH}) : {e}")
+        return None
 
 
 # ------------------------------------------------------------
@@ -137,6 +168,89 @@ def postprocess_to_api_format(output, ratio, pad_w, pad_h, orig_w, orig_h):
             }
         })
     return detections
+
+
+def track_to_api_format(model: YOLO, frame: np.ndarray) -> list[dict]:
+    """
+    Exécute model.track(..., tracker='botsort.yaml') et convertit
+    les résultats au format FrameData attendu par l'API.
+    """
+    results = model.track(
+        frame,
+        conf=CONF_THRESH,
+        iou=IOU_THRESH,
+        persist=True,
+        tracker=TRACKER_CONFIG,
+        verbose=False,
+    )
+
+    if not results:
+        return []
+
+    result = results[0]
+    if result.boxes is None:
+        return []
+
+    detections: list[dict] = []
+    names = result.names if isinstance(result.names, dict) else {}
+
+    for box in result.boxes:
+        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+        class_id = int(box.cls[0])
+        confidence = round(float(box.conf[0]), 3)
+        track_id = int(box.id[0]) if box.id is not None else None
+
+        detections.append({
+            "track_id": track_id,
+            "class_id": class_id,
+            "class_name": names.get(class_id, str(class_id)),
+            "confidence": confidence,
+            "bbox": {
+                "x1": x1,
+                "y1": y1,
+                "x2": x2,
+                "y2": y2,
+            }
+        })
+
+    return detections
+
+
+def infer_posture_for_person(
+    posture_model: YOLO | None,
+    frame: np.ndarray,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+) -> tuple[str | None, float | None]:
+    """Infère Supine/Not_Supine sur le crop personne via le modèle T1."""
+    if posture_model is None:
+        return None, None
+
+    x1 = max(0, x1)
+    y1 = max(0, y1)
+    x2 = min(frame.shape[1], x2)
+    y2 = min(frame.shape[0], y2)
+    if x2 <= x1 or y2 <= y1:
+        return None, None
+
+    person_crop = frame[y1:y2, x1:x2]
+    if person_crop.size == 0:
+        return None, None
+
+    try:
+        res = posture_model(person_crop, conf=0.25, verbose=False)[0]
+        if res.boxes is None or len(res.boxes) == 0:
+            return None, None
+
+        best_box = max(res.boxes, key=lambda b: float(b.conf[0]))
+        best_cls = int(best_box.cls[0])
+        best_conf = round(float(best_box.conf[0]), 3)
+        names = res.names if isinstance(res.names, dict) else {}
+        return names.get(best_cls, str(best_cls)), best_conf
+    except Exception:
+        return None, None
 
 def prepare_detections(results) -> list[dict]:
     """Convertit les résultats YOLO en format API avec types Python natifs."""
@@ -236,12 +350,23 @@ async def send_to_api(client: httpx.AsyncClient, frame_data: dict) -> int:
 async def main():
     logger.info("=== Simulateur Pipeline RPi 5 ===")
     logger.info(f"  ONNX     : {ONNX_MODEL}")
+    logger.info(f"  YOLO PT  : {YOLO_PT_MODEL}")
     logger.info(f"  API      : {API_URL}")
     logger.info(f"  Caméra   : {CAMERA_ID}")
     logger.info("  [Q] pour quitter\n")
 
-    session    = load_model()
-    input_name = session.get_inputs()[0].name
+    tracking_model = None
+    session = None
+    input_name = None
+
+    posture_model = load_posture_model()
+
+    if USE_BOTSORT:
+        tracking_model = load_tracking_model()
+
+    if tracking_model is None:
+        session = load_model()
+        input_name = session.get_inputs()[0].name
 
     cap = cv2.VideoCapture(WEBCAM_ID)
     if not cap.isOpened():
@@ -265,11 +390,31 @@ async def main():
             t0 = time.perf_counter()
 
             # ── Pipeline inférence ──
-            blob, ratio, pad_w, pad_h = preprocess(frame)
-            outputs     = session.run(None, {input_name: blob})
-            detections  = postprocess_to_api_format(
-                outputs[0], ratio, pad_w, pad_h, orig_w, orig_h
-            )
+            if tracking_model is not None:
+                detections = track_to_api_format(tracking_model, frame)
+            else:
+                blob, ratio, pad_w, pad_h = preprocess(frame)
+                outputs = session.run(None, {input_name: blob})
+                detections = postprocess_to_api_format(
+                    outputs[0], ratio, pad_w, pad_h, orig_w, orig_h
+                )
+
+            # Enrichissement optionnel avec la posture T1 pour les personnes.
+            if posture_model is not None:
+                for det in detections:
+                    if det.get("class_id") != 0:
+                        continue
+                    bb = det["bbox"]
+                    label, score = infer_posture_for_person(
+                        posture_model,
+                        frame,
+                        bb["x1"],
+                        bb["y1"],
+                        bb["x2"],
+                        bb["y2"],
+                    )
+                    det["posture_label"] = label
+                    det["posture_confidence"] = score
 
             fps = 0.9 * fps + 0.1 * (1.0 / (time.perf_counter() - t0 + 1e-6))
 

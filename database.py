@@ -11,11 +11,11 @@ import os
 import json
 import asyncio
 import logging
-from datetime import datetime
-from typing import Set
+from datetime import datetime, timedelta
+from typing import Set, Dict, Optional
 
 from fastapi import WebSocket
-from models import Alert
+from models import Alert, ZoneCreate
 logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------
@@ -99,6 +99,93 @@ _local_alert_buffer: list[dict] = []
 
 
 # ------------------------------------------------------------
+# Telegram bot + cooldown pour prévenir les opérateurs
+# ------------------------------------------------------------
+ALERT_COOLDOWN_SECONDS = int(os.getenv("ALERT_COOLDOWN_SECONDS", "30"))
+# Clé -> datetime UTC de la dernière notification envoyée
+_last_telegram_sent: Dict[str, datetime] = {}
+
+
+async def _should_send_telegram_for_alert(alert: Alert) -> bool:
+    """Détermine si une notification Telegram doit être envoyée
+    en respectant un cooldown par `track_id` ou par type/caméra si
+    `track_id` absent.
+    """
+    key = None
+    try:
+        if alert.detection_info and len(alert.detection_info) > 0:
+            track = alert.detection_info[0]
+            track_id = getattr(track, "track_id", None)
+            if track_id is not None:
+                key = f"track:{track_id}"
+    except Exception:
+        key = None
+
+    if key is None:
+        key = f"type:{alert.alert_type}:cam:{alert.camera_id}"
+
+    last = _last_telegram_sent.get(key)
+    if last is None:
+        return True
+    return (datetime.utcnow() - last) > timedelta(seconds=ALERT_COOLDOWN_SECONDS)
+
+
+async def send_telegram_alert(alert: Alert) -> bool:
+    """Envoie un message texte simple via le Bot Telegram configuré
+    Variables d'environnement attendues : TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
+    """
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id:
+        logger.debug("Telegram non configuré (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID manquants)")
+        return False
+
+    try:
+        ok = await _should_send_telegram_for_alert(alert)
+        if not ok:
+            logger.info("🔕 Telegram cooldown actif — notification ignorée")
+            return False
+
+        when = alert.timestamp.isoformat()
+        confidence = f"{alert.confidence_score:.2f}"
+        dashboard_url = os.getenv("DASHBOARD_URL", "http://localhost:3000")
+        link = f"{dashboard_url}/alerts/{alert.id}"
+        text = (
+            f"ALERTE: {alert.alert_type}\n"
+            f"Caméra: {alert.camera_id}\n"
+            f"Heure: {when}\n"
+            f"Confiance: {confidence}\n"
+            f"Détail: {alert.description}\n"
+            f"Dash: {link}"
+        )
+
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": text}
+        import httpx
+        async with httpx.AsyncClient() as client:
+            r = await client.post(url, json=payload, timeout=5.0)
+            if r.status_code == 200:
+                # Mettre à jour le timestamp de dernier envoi
+                # même si la réponse contient d'autres métadonnées
+                if alert.detection_info and len(alert.detection_info) > 0:
+                    track = alert.detection_info[0]
+                    track_id = getattr(track, "track_id", None)
+                    key = f"track:{track_id}" if track_id is not None else f"type:{alert.alert_type}:cam:{alert.camera_id}"
+                else:
+                    key = f"type:{alert.alert_type}:cam:{alert.camera_id}"
+                _last_telegram_sent[key] = datetime.utcnow()
+                logger.info("✅ Telegram envoyé")
+                return True
+            else:
+                logger.error(f"❌ Erreur Telegram {r.status_code}: {r.text}")
+                return False
+
+    except Exception as e:
+        logger.error(f"❌ Exception Telegram: {e}")
+        return False
+
+
+# ------------------------------------------------------------
 # FONCTIONS PRINCIPALES
 # ------------------------------------------------------------
 
@@ -144,6 +231,33 @@ async def insert_alert(alert: Alert) -> bool:
         return False
 
 
+async def insert_zone(zone: ZoneCreate) -> bool:
+    """Insère une zone polygonale dans Supabase."""
+    zone_dict = {
+        "camera_id": zone.camera_id,
+        "zone_name": zone.zone_name,
+        "points": zone.points,
+        "active": zone.active,
+        "updated_at": zone.updated_at.isoformat(),
+    }
+
+    if _supabase is None:
+        logger.warning("⚠️  Supabase indisponible — zone non persistée")
+        return False
+
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: _supabase.table("zones").insert(zone_dict).execute()
+        )
+        logger.info(f"✅ Zone insérée Supabase : {zone.camera_id}")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Erreur insert zone Supabase : {e}")
+        return False
+
+
 async def broadcast_alert(alert: Alert):
     """
     Envoie l'alerte à tous les clients WebSocket connectés.
@@ -158,6 +272,11 @@ async def broadcast_alert(alert: Alert):
     logger.info(
         f"📡 Alerte broadcastée à {len(manager.active_connections)} client(s) WS"
     )
+    # Après diffusion au dashboard, tenter d'envoyer une notification Telegram
+    try:
+        await send_telegram_alert(alert)
+    except Exception as e:
+        logger.error(f"❌ Erreur envoi Telegram après broadcast: {e}")
 
 
 async def get_recent_alerts(limit: int = 50) -> list[dict]:

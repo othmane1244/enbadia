@@ -1,0 +1,1255 @@
+{
+  "count": 50,
+  "alerts": [
+    {
+      "id": "680d9bb3-2646-476f-8aca-2cd66238fb1d",
+      "created_at": "2026-05-10T10:55:45.168216",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.39 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.645,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.929,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 370,
+            "y1": 249,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "05c717c9-529b-4e7b-a7da-3d35c6a09498",
+      "created_at": "2026-05-10T10:55:43.549141",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.642,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.928,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 370,
+            "y1": 248,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "380bdad4-683c-42de-9616-6db37a2ca746",
+      "created_at": "2026-05-10T10:55:21.941563",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.646,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.935,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "730a26e9-b33c-48ea-a6bb-833afc1af5a9",
+      "created_at": "2026-05-10T10:55:21.732130",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.645,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.933,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "cdbc7898-94a4-4b35-9805-8de67dc5ff1e",
+      "created_at": "2026-05-10T10:55:21.524121",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.646,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.935,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "2417e61f-1038-4c62-b229-99c2cdc20ac8",
+      "created_at": "2026-05-10T10:55:21.317304",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.645,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.934,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "9a0d43d2-d65b-4b3e-84d6-a94f85504d1d",
+      "created_at": "2026-05-10T10:55:21.105364",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.649,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.94,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "09c09147-c9cc-4b30-82f2-6db9ad92e72b",
+      "created_at": "2026-05-10T10:55:20.309186",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.647,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.936,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "a29f68d1-c634-4019-b8e6-492cd5db74ec",
+      "created_at": "2026-05-10T10:55:20.108303",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.648,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.938,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 370,
+            "y1": 246,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "950161ff-04c3-47f8-8362-4c814395a590",
+      "created_at": "2026-05-10T10:55:19.923065",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.65,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.94,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "b3677afb-b49a-4e96-bddd-b4a361db1fb8",
+      "created_at": "2026-05-10T10:55:18.537763",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.647,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "5308ac83-03af-47f9-90e4-0fa6a29d7f30",
+      "created_at": "2026-05-10T10:55:18.346613",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.646,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 245,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "c019a5a5-b96d-49f3-823e-1e84f8a8a32b",
+      "created_at": "2026-05-10T10:55:16.935531",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.39 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.646,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.933,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 368,
+            "y1": 246,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "e2696d3b-c15b-43a6-a83b-b2d15e9d6f59",
+      "created_at": "2026-05-10T10:55:14.708747",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.644,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.933,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 245,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "e1549107-22c9-4d43-a1ec-177abbd8ed9b",
+      "created_at": "2026-05-10T10:55:11.536834",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.39 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.645,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.931,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 368,
+            "y1": 247,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "c844cfd0-0c83-4e5f-9d89-16a28d877a9b",
+      "created_at": "2026-05-10T10:55:11.117090",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.645,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.933,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 368,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "bdb81679-34df-406f-b0e5-60b45c473943",
+      "created_at": "2026-05-10T10:55:10.069319",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.39 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.649,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 368,
+            "y1": 246,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "660fc733-0b87-4ee5-bd61-6716cb0b0302",
+      "created_at": "2026-05-10T10:55:09.878132",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.39 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.648,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.935,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 368,
+            "y1": 246,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "c73d0f34-5392-4977-a083-2e2c80e3a5d9",
+      "created_at": "2026-05-10T10:55:09.693999",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.643,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.931,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "63a0d23f-2d2a-494b-be7e-f7b255b6f2f6",
+      "created_at": "2026-05-10T10:55:09.502775",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.648,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.939,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "143cb53f-7a90-4168-8536-2b32ae8d9b5d",
+      "created_at": "2026-05-10T10:55:09.267689",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.648,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.939,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "2b5927e0-fc53-4740-9b3c-618b99092a3c",
+      "created_at": "2026-05-10T10:55:09.063350",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.649,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.94,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 246,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "0f88fa69-200b-4a04-a81a-570b0a98f55c",
+      "created_at": "2026-05-10T10:55:08.463364",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.38 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.65,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.939,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 369,
+            "y1": 247,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "94cf79e6-e2a5-41ce-b663-ddecbb455ed3",
+      "created_at": "2026-05-10T10:54:37.468296",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.30 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.599,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.923,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 384,
+            "y1": 230,
+            "x2": 1017,
+            "y2": 718
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "e1047d70-00ba-431f-8552-7aeb145695ae",
+      "created_at": "2026-05-10T10:54:27.841844",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.613,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.932,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 394,
+            "y1": 242,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "83423162-494e-465c-bf66-5ada3740ae0d",
+      "created_at": "2026-05-10T10:53:58.103240",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.616,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 240,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "445ddcd1-9c62-43ea-b54a-b479687ac050",
+      "created_at": "2026-05-10T10:53:56.877035",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.615,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.936,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 240,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "89560f50-9618-422f-ba79-60c2fbfbe599",
+      "created_at": "2026-05-10T10:53:56.683472",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.615,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.935,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 240,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "0caf14c3-ffec-4f20-ba06-7a71b616754f",
+      "created_at": "2026-05-10T10:53:56.483213",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.614,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.934,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 240,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "12c84389-b9cf-44d3-980b-9c5cdd4c6249",
+      "created_at": "2026-05-10T10:53:56.255571",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.615,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.936,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 240,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "d1bcbd75-700f-49b0-8cc7-72f04e19f75c",
+      "created_at": "2026-05-10T10:53:56.046411",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.616,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 240,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "9d14df0b-14ed-40b8-afdb-012661b5b3f9",
+      "created_at": "2026-05-10T10:53:55.834609",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.616,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 240,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "cd8ca454-2ed5-4bee-90b2-f8bdba38175b",
+      "created_at": "2026-05-10T10:53:55.637506",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.32 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.615,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.936,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 240,
+            "x2": 1019,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "a1dee8cd-42b0-4f21-b589-1e0ec3cb68f4",
+      "created_at": "2026-05-10T10:53:54.997705",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.31 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.612,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.935,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 239,
+            "x2": 1019,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "6c547141-ff4b-44c9-bfe3-03392504832b",
+      "created_at": "2026-05-10T10:53:42.134307",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.30 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.609,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 394,
+            "y1": 236,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "a3dfd5c9-16e2-48f3-8e5e-f81fabfc7651",
+      "created_at": "2026-05-10T10:53:41.949607",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.30 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.608,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 394,
+            "y1": 235,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "5ddc7e82-bcba-46ca-bb66-1185b3a441d2",
+      "created_at": "2026-05-10T10:53:41.513381",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.30 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.606,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.935,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 394,
+            "y1": 235,
+            "x2": 1018,
+            "y2": 716
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "cca50e87-4280-4257-94e2-07175ff32530",
+      "created_at": "2026-05-10T10:53:40.208012",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.30 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.608,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.936,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 394,
+            "y1": 236,
+            "x2": 1019,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "98a19f09-5608-448a-859e-2175fcaf1321",
+      "created_at": "2026-05-10T10:53:37.183456",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.29 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.607,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.938,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 393,
+            "y1": 234,
+            "x2": 1018,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "4ecc924c-f9ff-4017-9a59-0cad396ce5a2",
+      "created_at": "2026-05-10T10:53:32.443349",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.30 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.607,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.937,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 394,
+            "y1": 237,
+            "x2": 1016,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "9a1da646-7ad2-4ded-9ed7-882e2d3afaba",
+      "created_at": "2026-05-10T10:53:32.244878",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.29 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.605,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.936,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 395,
+            "y1": 237,
+            "x2": 1016,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "3e26db56-057c-4af8-8153-cdefd416524e",
+      "created_at": "2026-05-10T10:53:30.228546",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.39 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.651,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.935,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 303,
+            "y1": 224,
+            "x2": 990,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "238f1f93-76a6-4c8d-b783-34d7be591de3",
+      "created_at": "2026-05-10T10:53:29.929113",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.48 (seuil=1.2) [posture=Supine] [track_id=1]",
+      "confidence_score": 0.685,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.923,
+          "posture_label": "Supine",
+          "posture_confidence": 0.324,
+          "bbox": {
+            "x1": 278,
+            "y1": 221,
+            "x2": 1016,
+            "y2": 718
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "15b5e781-aaf8-4167-9c46-b81b9679bd2e",
+      "created_at": "2026-05-10T10:53:29.046674",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.36 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.631,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.926,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 353,
+            "y1": 210,
+            "x2": 1045,
+            "y2": 718
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "93799622-5018-4492-972c-2fbffb3b32a7",
+      "created_at": "2026-05-10T10:53:27.394165",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.35 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.624,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.927,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 372,
+            "y1": 217,
+            "x2": 1046,
+            "y2": 718
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "51a65b93-908b-4c77-9fea-dcbe7eb55f41",
+      "created_at": "2026-05-10T10:53:27.115735",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.37 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.645,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.939,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 358,
+            "y1": 217,
+            "x2": 1045,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "5fe1f081-4217-428b-8426-333bcac98888",
+      "created_at": "2026-05-10T10:53:26.876467",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.39 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.644,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.928,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 351,
+            "y1": 218,
+            "x2": 1044,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "9f07336a-000a-406e-a470-80b306408db5",
+      "created_at": "2026-05-10T10:53:26.652439",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.36 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.628,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.922,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 363,
+            "y1": 216,
+            "x2": 1045,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "632709a4-abc5-4440-a1c4-7e6f13986207",
+      "created_at": "2026-05-10T10:53:26.432254",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.31 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.606,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.928,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 390,
+            "y1": 217,
+            "x2": 1043,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    },
+    {
+      "id": "2f843663-2b7c-4259-bf91-9426aba70637",
+      "created_at": "2026-05-10T10:53:26.205344",
+      "camera_id": "cam_01_simulation",
+      "alert_type": "Chute",
+      "description": "Chute possible — ratio w/h=1.30 (seuil=1.2) [posture=N/A] [track_id=1]",
+      "confidence_score": 0.607,
+      "detection_info": [
+        {
+          "track_id": 1,
+          "class_id": 0,
+          "class_name": "person",
+          "confidence": 0.933,
+          "posture_label": null,
+          "posture_confidence": null,
+          "bbox": {
+            "x1": 390,
+            "y1": 216,
+            "x2": 1042,
+            "y2": 717
+          }
+        }
+      ],
+      "is_resolved": false
+    }
+  ]
+}

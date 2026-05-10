@@ -202,7 +202,7 @@ if (Test-Path $ONNX_FILE) {
     Write-Info "Téléchargement de yolo11n.pt et conversion en ONNX..."
     Write-Info "(première exécution : ~200 MB à télécharger)"
     Set-Location $ROOT
-    & $PY convert_to_onnx.py
+    & $PY model/convert_to_onnx.py
     if ($LASTEXITCODE -ne 0) {
         Write-Fail "Erreur lors de la conversion ONNX"
         exit 1
@@ -306,7 +306,7 @@ switch ($choice) {
             "-NoExit",
             "-ExecutionPolicy", "Bypass",
             "-Command",
-            "& { `$Host.UI.RawUI.WindowTitle = 'Simulateur — YOLO + DirectML'; Set-Location '$ROOT'; & '$ACTIVATE'; Write-Host '>>> Simulateur pipeline (webcam + ONNX DirectML)' -ForegroundColor Cyan; Write-Host '    Appuyer sur Q dans la fenêtre vidéo pour quitter' -ForegroundColor Gray; python simulator.py }"
+            "& { `$Host.UI.RawUI.WindowTitle = 'Simulateur — YOLO + DirectML'; Set-Location '$ROOT'; & '$ACTIVATE'; Write-Host '>>> Simulateur pipeline (webcam + ONNX DirectML)' -ForegroundColor Cyan; Write-Host '    Appuyer sur Q dans la fenêtre vidéo pour quitter' -ForegroundColor Gray; python model/simulator.py }"
         )
 
         # Fenêtre 3 — Dashboard Next.js
@@ -344,7 +344,7 @@ switch ($choice) {
             "-NoExit",
             "-ExecutionPolicy", "Bypass",
             "-Command",
-            "& { `$Host.UI.RawUI.WindowTitle = 'Simulateur — YOLO + DirectML'; Set-Location '$ROOT'; & '$ACTIVATE'; Write-Host '>>> Simulateur pipeline (webcam + ONNX DirectML)' -ForegroundColor Cyan; python simulator.py }"
+            "& { `$Host.UI.RawUI.WindowTitle = 'Simulateur — YOLO + DirectML'; Set-Location '$ROOT'; & '$ACTIVATE'; Write-Host '>>> Simulateur pipeline (webcam + ONNX DirectML)' -ForegroundColor Cyan; python model/simulator.py }"
         )
 
         Write-Host ""
@@ -366,7 +366,7 @@ switch ($choice) {
         Write-Host ""
         Write-Host "    # Terminal 2 — Simulateur :" -ForegroundColor Gray
         Write-Host "    cd '$ROOT' ; .\hailo_env\Scripts\Activate.ps1" -ForegroundColor DarkCyan
-        Write-Host "    python simulator.py" -ForegroundColor DarkCyan
+        Write-Host "    python model/simulator.py" -ForegroundColor DarkCyan
         Write-Host ""
         Write-Host "    # Terminal 3 — Dashboard :" -ForegroundColor Gray
         Write-Host "    cd '$ROOT\dashboard'" -ForegroundColor DarkCyan

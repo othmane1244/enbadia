@@ -11,9 +11,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import FrameData, Alert, ProcessFrameResponse
+from models import FrameData, Alert, ProcessFrameResponse, ZoneCreate
 from services import analyze_behavior
-from database import manager, insert_alert, broadcast_alert, get_recent_alerts, get_local_buffer
+from database import manager, insert_alert, insert_zone, broadcast_alert, get_recent_alerts, get_local_buffer
+from watchdog import start_watchdog_task, stop_watchdog_task
 
 # ------------------------------------------------------------
 # LOGGING
@@ -38,7 +39,10 @@ async def lifespan(app: FastAPI):
     logger.info("     GET  /alerts/           — historique alertes")
     logger.info("     GET  /health/           — état du serveur")
     logger.info("     WS   /ws/alerts         — stream temps réel")
+    app.state.watchdog_task = start_watchdog_task()
+    logger.info("🛡️ Watchdog lancé en arrière-plan")
     yield
+    await stop_watchdog_task()
     logger.info("🛑 Surveillance API arrêtée")
 
 
@@ -142,6 +146,21 @@ async def get_alerts(limit: int = 50):
         raise HTTPException(status_code=400, detail="limit doit être entre 1 et 200")
     alerts = await get_recent_alerts(limit=limit)
     return {"count": len(alerts), "alerts": alerts}
+
+
+@app.post("/zones/", tags=["Zones"])
+async def create_zone(zone: ZoneCreate):
+    """Crée une zone polygonale dans Supabase depuis le dashboard."""
+    if not zone.camera_id.strip():
+        raise HTTPException(status_code=400, detail="camera_id est requis")
+    if len(zone.points) < 3:
+        raise HTTPException(status_code=400, detail="Une zone doit contenir au moins 3 points")
+
+    saved = await insert_zone(zone)
+    if not saved:
+        raise HTTPException(status_code=500, detail="Impossible d'enregistrer la zone")
+
+    return {"ok": True, "camera_id": zone.camera_id, "points": len(zone.points)}
 
 
 @app.get("/alerts/buffer/", tags=["Debug"])

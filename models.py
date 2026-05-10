@@ -47,6 +47,16 @@ class Detection(BaseModel):
     class_id:   int             = Field(..., ge=0, lt=80)
     class_name: str             = Field(..., min_length=1)
     confidence: float           = Field(..., ge=0.0, le=1.0)
+    posture_label: Optional[str] = Field(
+        None,
+        description="Sortie modèle T1 posture (Supine/Not_Supine) pour les personnes"
+    )
+    posture_confidence: Optional[float] = Field(
+        None,
+        ge=0.0,
+        le=1.0,
+        description="Confiance du modèle T1 posture"
+    )
     bbox:       BoundingBox
 
 
@@ -89,3 +99,12 @@ class ProcessFrameResponse(BaseModel):
     detections_count: int
     alerts_generated: list[Alert]
     processing_time_ms: float
+
+
+class ZoneCreate(BaseModel):
+    """Données envoyées depuis le dashboard pour créer une zone polygonale."""
+    camera_id: str = Field(..., min_length=1)
+    zone_name: str = Field(default='Zone Interdite', min_length=1)
+    points: list[dict[str, float]] = Field(default_factory=list)
+    active: bool = True
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
