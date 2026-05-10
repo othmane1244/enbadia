@@ -16,6 +16,7 @@ import httpx
 import asyncio
 import time
 import logging
+import base64
 from datetime import datetime, timezone
 
 logging.basicConfig(
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------
 ONNX_MODEL      = "yolo11n.onnx"
 API_URL         = "http://127.0.0.1:8000/process_frame/"
+VIDEO_FRAME_URL = "http://127.0.0.1:8000/video/frame"
 CAMERA_ID       = "cam_01_simulation"
 WEBCAM_ID       = 0
 INPUT_SIZE      = 640
@@ -230,6 +232,34 @@ async def send_to_api(client: httpx.AsyncClient, frame_data: dict) -> int:
         return 0
 
 
+async def send_video_frame(client: httpx.AsyncClient, frame: np.ndarray, frame_id: int) -> bool:
+    """
+    Envoie une frame annotée en JPEG base64 via POST /video/frame.
+    Le backend la broadcast aux clients WebSocket /ws/video.
+    """
+    try:
+        # Encoder frame en JPEG
+        ret, jpeg_data = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not ret:
+            logger.error("Impossible d'encoder la frame en JPEG")
+            return False
+        
+        # Convertir en base64
+        base64_frame = base64.b64encode(jpeg_data.tobytes()).decode('utf-8')
+        
+        # Envoyer au backend
+        payload = {
+            "frame_id": frame_id,
+            "camera_id": CAMERA_ID,
+            "data": base64_frame,
+        }
+        resp = await client.post(VIDEO_FRAME_URL, json=payload, timeout=1.0)
+        return resp.status_code == 200
+    except Exception as e:
+        logger.error(f"Erreur envoi frame vidéo : {e}")
+        return False
+
+
 # ------------------------------------------------------------
 # BOUCLE PRINCIPALE
 # ------------------------------------------------------------
@@ -285,9 +315,10 @@ async def main():
                 n_alerts = await send_to_api(client, frame_payload)
                 api_alerts_acc += n_alerts
 
-            # ── Affichage ──
+            # ── Envoi vidéo annotée au dashboard ──
             if DISPLAY_WINDOW:
                 display = draw_frame(frame, detections, fps, api_alerts_acc, frame_id)
+                await send_video_frame(client, display, frame_id)
                 cv2.imshow("Simulateur — RPi5 + Hailo-8 (PC)", display)
 
             frame_id += 1

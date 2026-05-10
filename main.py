@@ -6,12 +6,15 @@
 
 import time
 import logging
+import cv2
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import FrameData, Alert, ProcessFrameResponse, ZoneCreate
+from models import FrameData, Alert, ProcessFrameResponse, ZoneCreate, VideoFrame
 from services import analyze_behavior
 from database import manager, insert_alert, insert_zone, broadcast_alert, get_recent_alerts, get_local_buffer
 from watchdog import start_watchdog_task, stop_watchdog_task, get_watchdog_status
@@ -29,6 +32,44 @@ logger = logging.getLogger(__name__)
 
 
 # ------------------------------------------------------------
+# MANAGERS (alertes + vidéo)
+# ------------------------------------------------------------
+class ConnectionManager:
+    """Gère les connexions WebSocket pour un type de flux."""
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+    
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+    
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+    
+    async def broadcast(self, data: dict):
+        """Envoie un message à tous les clients connectés."""
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(data)
+            except Exception as e:
+                logger.error(f"Erreur broadcast : {e}")
+                disconnected.append(connection)
+        
+        for conn in disconnected:
+            self.disconnect(conn)
+
+
+# Video recording state
+video_manager = ConnectionManager()  # Pour /ws/video
+_video_writer = None
+_video_output_path = None
+_video_codec = cv2.VideoWriter_fourcc(*'mp4v')
+_video_fps = 30
+_video_frame_size = (1280, 720)
+
+
+# ------------------------------------------------------------
 # CYCLE DE VIE DE L'APPLICATION
 # ------------------------------------------------------------
 @asynccontextmanager
@@ -37,9 +78,11 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Surveillance API démarrée")
     logger.info("   Endpoints disponibles :")
     logger.info("     POST /process_frame/    — recevoir détections")
+    logger.info("     POST /video/frame       — recevoir frames vidéo")
     logger.info("     GET  /alerts/           — historique alertes")
     logger.info("     GET  /health/           — état du serveur")
-    logger.info("     WS   /ws/alerts         — stream temps réel")
+    logger.info("     WS   /ws/alerts         — stream alertes temps réel")
+    logger.info("     WS   /ws/video          — stream vidéo temps réel")
     app.state.watchdog_task = start_watchdog_task()
     logger.info("🛡️ Watchdog lancé en arrière-plan")
     app.state.report_scheduler = start_report_scheduler()
@@ -206,6 +249,80 @@ async def watchdog_status():
 
 
 # ------------------------------------------------------------
+# VIDEO — Streaming et enregistrement
+# -------- -----------------------------------------------
+
+@app.post("/video/frame", tags=["Video"])
+async def receive_video_frame(frame: VideoFrame):
+    """
+    Reçoit une frame vidéo en JPEG base64 depuis le simulateur/backend.
+    La broadcast à tous les clients WebSocket /ws/video.
+    """
+    await video_manager.broadcast({
+        "event": "frame",
+        "frame_id": frame.frame_id,
+        "camera_id": frame.camera_id,
+        "data": frame.data,  # Base64-encoded JPEG
+    })
+    return {"ok": True}
+
+
+@app.post("/video/record/start/", tags=["Video"])
+async def start_video_recording():
+    """
+    Démarre l'enregistrement vidéo via cv2.VideoWriter.
+    Retourne le chemin du fichier sauvegardé.
+    """
+    global _video_writer, _video_output_path
+    
+    if _video_writer is not None:
+        raise HTTPException(status_code=400, detail="Enregistrement déjà en cours")
+    
+    # Créer un dossier recordings s'il n'existe pas
+    recordings_dir = Path("recordings")
+    recordings_dir.mkdir(exist_ok=True)
+    
+    # Générer un nom de fichier avec timestamp
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    _video_output_path = str(recordings_dir / f"video_{timestamp}.mp4")
+    
+    # Créer le VideoWriter
+    _video_writer = cv2.VideoWriter(
+        _video_output_path,
+        _video_codec,
+        _video_fps,
+        _video_frame_size
+    )
+    
+    if not _video_writer.isOpened():
+        _video_writer = None
+        raise HTTPException(status_code=500, detail="Impossible de démarrer l'enregistrement")
+    
+    logger.info(f"🎥 Enregistrement vidéo démarré : {_video_output_path}")
+    return {"ok": True, "output_path": _video_output_path}
+
+
+@app.post("/video/record/stop/", tags=["Video"])
+async def stop_video_recording():
+    """
+    Arrête l'enregistrement vidéo et retourne le nom du fichier sauvegardé.
+    """
+    global _video_writer, _video_output_path
+    
+    if _video_writer is None:
+        raise HTTPException(status_code=400, detail="Aucun enregistrement en cours")
+    
+    _video_writer.release()
+    _video_writer = None
+    
+    output_name = Path(_video_output_path).name if _video_output_path else "unknown"
+    logger.info(f"🎬 Enregistrement vidéo arrêté : {output_name}")
+    
+    return {"ok": True, "filename": output_name}
+
+
+# -------- -----------------------------------------------
 # WEBSOCKET — Stream alertes temps réel vers le dashboard
 # ------------------------------------------------------------
 
@@ -242,3 +359,33 @@ async def websocket_alerts(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
         logger.info("📡 Client WS déconnecté")
+
+
+@app.websocket("/ws/video")
+async def websocket_video(websocket: WebSocket):
+    """
+    WebSocket pour le stream vidéo en temps réel vers le dashboard.
+    Le client reçoit chaque frame en JPEG base64 en temps réel.
+    """
+    await video_manager.connect(websocket)
+    logger.info(f"📹 Nouveau client vidéo connecté ({len(video_manager.active_connections)} total)")
+
+    # Message de bienvenue
+    await websocket.send_json({
+        "event": "connected",
+        "message": "Connecté au flux vidéo en temps réel",
+    })
+
+    try:
+        while True:
+            # Maintient la connexion ouverte
+            # Les frames sont envoyées via video_manager.broadcast() dans /video/frame
+            data = await websocket.receive_text()
+
+            # Gestion des messages client (ex: heartbeat)
+            if data == "ping":
+                await websocket.send_json({"event": "pong"})
+
+    except WebSocketDisconnect:
+        video_manager.disconnect(websocket)
+        logger.info(f"📹 Client vidéo déconnecté ({len(video_manager.active_connections)} restants)")

@@ -98,3 +98,10 @@ class ZoneCreate(BaseModel):
     points: list[dict[str, float]] = Field(default_factory=list)
     active: bool = True
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class VideoFrame(BaseModel):
+    """Frame vidéo encodée en JPEG base64 pour le WebSocket /ws/video."""
+    frame_id: int
+    camera_id: str
+    data: str  # Base64-encoded JPEG
