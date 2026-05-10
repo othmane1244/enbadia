@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, LayoutDashboard, FileText, Video, BarChart2, Pentagon } from 'lucide-react'
+import { Activity, LayoutDashboard, FileText, Video, BarChart2, Pentagon, Cpu } from 'lucide-react'
 import { useLang } from '@/lib/i18n'
 import { t } from '@/lib/translations'
 
@@ -17,6 +17,7 @@ export default function Sidebar() {
     { href: '/videos',    icon: Video,            label: tr.nav.videos },
     { href: '/analytics', icon: BarChart2,        label: tr.nav.analytics },
     { href: '/zones',     icon: Pentagon,         label: tr.nav.zones },
+    { href: '/system',    icon: Cpu,              label: tr.nav.system },
   ]
 
   return (

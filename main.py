@@ -14,7 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import FrameData, Alert, ProcessFrameResponse, ZoneCreate
 from services import analyze_behavior
 from database import manager, insert_alert, insert_zone, broadcast_alert, get_recent_alerts, get_local_buffer
-from watchdog import start_watchdog_task, stop_watchdog_task
+from watchdog import start_watchdog_task, stop_watchdog_task, get_watchdog_status
+from report_generator import start_report_scheduler, stop_report_scheduler
 
 # ------------------------------------------------------------
 # LOGGING
@@ -41,7 +42,10 @@ async def lifespan(app: FastAPI):
     logger.info("     WS   /ws/alerts         — stream temps réel")
     app.state.watchdog_task = start_watchdog_task()
     logger.info("🛡️ Watchdog lancé en arrière-plan")
+    app.state.report_scheduler = start_report_scheduler()
+    logger.info("🗓️ Scheduler de rapport lancé en arrière-plan")
     yield
+    await stop_report_scheduler()
     await stop_watchdog_task()
     logger.info("🛑 Surveillance API arrêtée")
 
@@ -193,6 +197,12 @@ async def get_stats():
         "avg_fps":        fps_avg,
         "ws_clients":     len(manager.active_connections),
     }
+
+
+@app.get("/watchdog/status/", tags=["Monitoring"])
+async def watchdog_status():
+    """Retourne l'état système et du watchdog pour la page System."""
+    return get_watchdog_status()
 
 
 # ------------------------------------------------------------

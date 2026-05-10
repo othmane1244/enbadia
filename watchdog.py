@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -66,6 +65,67 @@ async def _monitor_once() -> None:
         logger.warning(f"CPU élevé détecté: {cpu:.1f}%")
     if disk >= DISK_ALERT_THRESHOLD:
         logger.warning(f"Disque presque plein: {disk:.1f}%")
+
+
+def _read_cpu_temperature_c() -> Optional[float]:
+    try:
+        import psutil
+    except Exception:
+        return None
+
+    try:
+        temps = psutil.sensors_temperatures(fahrenheit=False)
+    except Exception:
+        return None
+
+    if not temps:
+        return None
+
+    preferred_sensors = (
+        "coretemp",
+        "cpu_thermal",
+        "k10temp",
+        "acpitz",
+        "cpu-thermal",
+    )
+
+    for sensor_name in preferred_sensors:
+        entries = temps.get(sensor_name)
+        if not entries:
+            continue
+        for entry in entries:
+            if entry.current is not None:
+                return float(entry.current)
+
+    for entries in temps.values():
+        for entry in entries:
+            if entry.current is not None:
+                return float(entry.current)
+
+    return None
+
+
+def get_watchdog_status() -> dict:
+    try:
+        import psutil
+    except Exception:
+        return {
+            "cpu_temperature_c": None,
+            "ram_used_percent": None,
+            "disk_used_percent": None,
+            "watchdog_interval_seconds": WATCHDOG_INTERVAL_SECONDS,
+            "supabase_keepalive_interval_seconds": SUPABASE_KEEPALIVE_INTERVAL_SECONDS,
+            "last_supabase_ping": _last_supabase_ping.isoformat() if _last_supabase_ping else None,
+        }
+
+    return {
+        "cpu_temperature_c": _read_cpu_temperature_c(),
+        "ram_used_percent": float(psutil.virtual_memory().percent),
+        "disk_used_percent": float(psutil.disk_usage(_get_disk_usage_path()).percent),
+        "watchdog_interval_seconds": WATCHDOG_INTERVAL_SECONDS,
+        "supabase_keepalive_interval_seconds": SUPABASE_KEEPALIVE_INTERVAL_SECONDS,
+        "last_supabase_ping": _last_supabase_ping.isoformat() if _last_supabase_ping else None,
+    }
 
 
 async def _watchdog_loop() -> None:
