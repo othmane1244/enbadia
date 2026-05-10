@@ -6,17 +6,11 @@
 
 import logging
 import math
-from models import Detection, Alert, AlertType, FrameData
+from models import Detection, Alert, AlertType, FrameData, Zone
 
 logger = logging.getLogger(__name__)
 
-# ------------------------------------------------------------
-# CONFIGURATION DES ZONES ET SEUILS
-# ------------------------------------------------------------
-
-# Zone d'intrusion interdite (en % de la frame 640x640)
-# Format : (x1_pct, y1_pct, x2_pct, y2_pct)
-ZONE_INTERDITE = (0.0, 0.0, 0.4, 1.0)   # 40% gauche de l'image
+# Note: ZONE_INTERDITE removed — zones now loaded from Supabase
 
 # Seuils comportementaux
 FALL_RATIO_THRESHOLD     = 1.2    # Ratio w/h > 1.2 → personne allongée
@@ -34,17 +28,51 @@ VEHICLE_CLASSES = {1, 2, 3, 5, 7} # bicycle, car, motorcycle, bus, truck
 # UTILITAIRES GÉOMÉTRIQUES
 # ------------------------------------------------------------
 
-def point_in_zone(
-    cx: float, cy: float,
-    zone: tuple[float, float, float, float],
-    frame_w: int = 640, frame_h: int = 640
-) -> bool:
-    """Vérifie si un point (cx, cy) est dans la zone interdite."""
-    zx1 = zone[0] * frame_w
-    zy1 = zone[1] * frame_h
-    zx2 = zone[2] * frame_w
-    zy2 = zone[3] * frame_h
-    return zx1 <= cx <= zx2 and zy1 <= cy <= zy2
+def point_in_polygon(point_x: float, point_y: float, polygon_points: list[dict]) -> bool:
+    """
+    Vérifie si un point est à l'intérieur d'un polygone
+    en utilisant l'algorithme Ray Casting.
+    
+    Les points du polygone sont en coordonnées normalisées (0.0-1.0).
+    point_x, point_y sont aussi en coordonnées normalisées.
+    
+    Algorithme Ray Casting :
+    On lance un rayon horizontal depuis le point vers la droite.
+    Si le rayon traverse un nombre impair d'edges du polygone,
+    le point est à l'intérieur.
+    """
+    if not polygon_points or len(polygon_points) < 3:
+        return False
+    
+    # Normaliser les points du polygone
+    vertices = []
+    for p in polygon_points:
+        if isinstance(p, dict):
+            vertices.append((p.get('x', 0.0), p.get('y', 0.0)))
+        else:
+            vertices.append((float(p[0]), float(p[1])))
+    
+    # Ray casting algorithm
+    n = len(vertices)
+    inside = False
+    
+    p1x, p1y = vertices[0]
+    for i in range(1, n + 1):
+        p2x, p2y = vertices[i % n]
+        
+        # Vérifier si le rayon horizontal du point traverse cet edge
+        if point_y > min(p1y, p2y):
+            if point_y <= max(p1y, p2y):
+                if point_x <= max(p1x, p2x):
+                    # Calculer l'intersection x du rayon avec l'edge
+                    if p1y != p2y:
+                        xinters = (point_y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                    if p1x == p2x or point_x <= xinters:
+                        inside = not inside
+        
+        p1x, p1y = p2x, p2y
+    
+    return inside
 
 
 def euclidean_distance(p1: tuple[float, float], p2: tuple[float, float]) -> float:
@@ -56,31 +84,53 @@ def euclidean_distance(p1: tuple[float, float], p2: tuple[float, float]) -> floa
 # RÈGLES D'ANALYSE COMPORTEMENTALE
 # ------------------------------------------------------------
 
-def detect_intrusion(detections: list[Detection], camera_id: str) -> list[Alert]:
+def detect_intrusion(detections: list[Detection], camera_id: str, zones: list[Zone] = None) -> list[Alert]:
     """
     Règle 1 — Intrusion :
-    Une personne dont le centre se trouve dans ZONE_INTERDITE.
+    Une personne dont le centre se trouve dans une zone interdite.
+    Utilise l'algorithme Ray Casting pour vérifier l'appartenance au polygone.
+    
+    Args:
+        detections: Détections YOLO du frame
+        camera_id: ID de la caméra
+        zones: Zones polygonales interdites depuis Supabase (optionnel)
     """
     alerts = []
+    
+    # Si aucune zone, retourner
+    if not zones:
+        return alerts
+    
     persons = [d for d in detections
                if d.class_id == PERSON_CLASS
                and d.confidence >= CONFIDENCE_MIN_DETECTION]
 
     for person in persons:
         cx, cy = person.bbox.center
-        if point_in_zone(cx, cy, ZONE_INTERDITE):
-            alerts.append(Alert(
-                camera_id        = camera_id,
-                alert_type       = AlertType.INTRUSION,
-                description      = (
-                    f"Personne détectée dans la zone interdite "
-                    f"(centre: {cx:.0f},{cy:.0f}) "
-                    f"[track_id={person.track_id}]"
-                ),
-                confidence_score = round(person.confidence, 3),
-                detection_info   = [person],
-            ))
-            logger.warning(f"🚨 INTRUSION détectée — track_id={person.track_id}")
+        
+        # Vérifier dans chaque zone active
+        for zone in zones:
+            if not zone.active:
+                continue
+            
+            # Ray Casting: vérifier si le centre est dans ce polygone
+            if point_in_polygon(cx, cy, zone.points):
+                alerts.append(Alert(
+                    camera_id        = camera_id,
+                    alert_type       = AlertType.INTRUSION,
+                    description      = (
+                        f"Personne détectée dans '{zone.name}' "
+                        f"(centre: {cx:.0f},{cy:.0f}) "
+                        f"[track_id={person.track_id}]"
+                    ),
+                    confidence_score = round(person.confidence, 3),
+                    detection_info   = [person],
+                ))
+                logger.warning(
+                    f"🚨 INTRUSION détectée dans '{zone.name}' "
+                    f"— track_id={person.track_id}"
+                )
+                break  # Alerte une fois par personne même si dans plusieurs zones
 
     return alerts
 
@@ -198,16 +248,20 @@ def detect_crowd(detections: list[Detection], camera_id: str) -> list[Alert]:
 # POINT D'ENTRÉE PRINCIPAL
 # ------------------------------------------------------------
 
-def analyze_behavior(frame_data: FrameData) -> list[Alert]:
+def analyze_behavior(frame_data: FrameData, zones: list[Zone] = None) -> list[Alert]:
     """
     Applique toutes les règles d'analyse sur un frame.
     Retourne la liste de toutes les alertes générées.
 
     Ordre d'analyse :
-    1. Intrusion  (critique)
+    1. Intrusion  (critique) — utilise zones dynamiques de Supabase
     2. Chute      (critique)
     3. Objet abandonné
     4. Attroupement
+    
+    Args:
+        frame_data: Données du frame avec détections
+        zones: Zones polygonales d'intrusion depuis Supabase (optionnel)
     """
     detections = frame_data.detections
     camera_id  = frame_data.camera_id
@@ -236,7 +290,7 @@ def analyze_behavior(frame_data: FrameData) -> list[Alert]:
         logger.info(f"  - track_id={p.track_id} conf={p.confidence:.3f}")
 
 
-    all_alerts += detect_intrusion(detections, camera_id)
+    all_alerts += detect_intrusion(detections, camera_id, zones=zones)
     all_alerts += detect_fall(detections, camera_id)
     all_alerts += detect_abandoned_object(detections, camera_id)
     all_alerts += detect_crowd(detections, camera_id)

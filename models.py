@@ -10,9 +10,22 @@ from datetime import datetime
 import uuid
 
 
-# ------------------------------------------------------------
+# ============================================================
+# ZONES — Géométrie de surveillance
+# ============================================================
+
+class Zone(BaseModel):
+    """Zone polygonale de surveillance depuis Supabase."""
+    zone_id: Optional[str] = Field(None, description="ID unique Supabase")
+    camera_id: str = Field(..., description="ID caméra")
+    name: str = Field(..., description="Nom de la zone")
+    points: list[dict] = Field(default_factory=list, description="Points polygone")
+    active: bool = Field(True, description="Zone active")
+
+
+# ============================================================
 # ENTRÉE — Ce que le pipeline envoie à l'API
-# ------------------------------------------------------------
+# ============================================================
 
 class BoundingBox(BaseModel):
     """Boîte englobante d'un objet détecté."""
@@ -57,6 +70,7 @@ class FrameData(BaseModel):
     timestamp:  datetime        = Field(default_factory=datetime.utcnow)
     fps:        float           = Field(..., ge=0.0)
     detections: list[Detection] = Field(default_factory=list)
+    zones:      list[Zone]      = Field(default_factory=list, description="Zones d'intrusion")
 
 
 # ------------------------------------------------------------

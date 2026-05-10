@@ -14,9 +14,9 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from models import FrameData, Alert, ProcessFrameResponse, ZoneCreate, VideoFrame
+from models import FrameData, Alert, ProcessFrameResponse, ZoneCreate, VideoFrame, Zone
 from services import analyze_behavior
-from database import manager, insert_alert, insert_zone, broadcast_alert, get_recent_alerts, get_local_buffer
+from database import manager, insert_alert, insert_zone, broadcast_alert, get_recent_alerts, get_local_buffer, fetch_zones
 from watchdog import start_watchdog_task, stop_watchdog_task, get_watchdog_status
 from report_generator import start_report_scheduler, stop_report_scheduler
 
@@ -83,6 +83,31 @@ async def lifespan(app: FastAPI):
     logger.info("     GET  /health/           — état du serveur")
     logger.info("     WS   /ws/alerts         — stream alertes temps réel")
     logger.info("     WS   /ws/video          — stream vidéo temps réel")
+    
+    # Charger les zones d'intrusion au démarrage
+    logger.info("📍 Chargement des zones d'intrusion depuis Supabase...")
+    zones_data = await fetch_zones()
+    
+    # Convertir au format Zone
+    zones = []
+    for z in zones_data:
+        zone = Zone(
+            zone_id=z.get("zone_id"),
+            camera_id=z.get("camera_id", ""),
+            name=z.get("name", "Zone Interdite"),
+            points=z.get("points", []),
+            active=True
+        )
+        zones.append(zone)
+    
+    app.state.zones = zones
+    if zones:
+        logger.info(f"✅ {len(zones)} zone(s) chargée(s) avec succès")
+        for z in zones:
+            logger.info(f"   - {z.name} ({z.camera_id})")
+    else:
+        logger.warning("⚠️  Aucune zone active trouvée dans Supabase")
+    
     app.state.watchdog_task = start_watchdog_task()
     logger.info("🛡️ Watchdog lancé en arrière-plan")
     app.state.report_scheduler = start_report_scheduler()
@@ -150,12 +175,13 @@ async def process_frame(frame_data: FrameData):
       1. Dans Supabase PostgreSQL (persistance)
       2. Via WebSocket aux clients dashboard connectés
 
-    Simule le pipeline Edge-to-Cloud du document Phase 3.
+    Utilise les zones d'intrusion chargées depuis Supabase au démarrage.
     """
     t_start = time.perf_counter()
 
-    # --- Analyse comportementale ---
-    alerts: list[Alert] = analyze_behavior(frame_data)
+    # --- Analyse comportementale avec zones dynamiques ---
+    zones = getattr(app.state, 'zones', [])
+    alerts: list[Alert] = analyze_behavior(frame_data, zones=zones)
 
     # --- Persistance + broadcast pour chaque alerte ---
     for alert in alerts:
