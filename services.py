@@ -6,6 +6,7 @@
 
 import logging
 import math
+from datetime import datetime
 from models import Detection, Alert, AlertType, FrameData, Zone
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 # Note: ZONE_INTERDITE removed — zones now loaded from Supabase
 
 # Seuils comportementaux
-FALL_RATIO_THRESHOLD     = 1.2    # Ratio w/h > 1.2 → personne allongée
+FALL_RATIO_THRESHOLD     = 1.5    # Ratio w/h > 1.5 → personne allongée
 CROWD_MIN_PERSONS        = 3     # Nombre min de personnes → attroupement
 ABANDONED_OBJECT_DIST    = 120    # px — distance max objet/personne → "proche"
 CONFIDENCE_MIN_DETECTION = 0.45   # Seuil confiance détection YOLO
@@ -37,7 +38,7 @@ def point_in_polygon(point_x: float, point_y: float, polygon_points: list[dict])
     point_x, point_y sont aussi en coordonnées normalisées.
     
     Algorithme Ray Casting :
-    On lance un rayon horizontal depuis le point vers la droite.
+    On lance un rayon horizontal depuis le point vers la droite (+∞).
     Si le rayon traverse un nombre impair d'edges du polygone,
     le point est à l'intérieur.
     """
@@ -48,27 +49,48 @@ def point_in_polygon(point_x: float, point_y: float, polygon_points: list[dict])
     vertices = []
     for p in polygon_points:
         if isinstance(p, dict):
-            vertices.append((p.get('x', 0.0), p.get('y', 0.0)))
+            x = p.get('x', p.get('X', 0.0))
+            y = p.get('y', p.get('Y', 0.0))
+            vertices.append((float(x), float(y)))
         else:
             vertices.append((float(p[0]), float(p[1])))
     
-    # Ray casting algorithm
+    eps = 1e-9
+
+    # Point sur un segment: considéré comme à l'intérieur (inclusif des bords/sommets)
+    def _point_on_segment(px: float, py: float,
+                          x1: float, y1: float,
+                          x2: float, y2: float) -> bool:
+        if (px < min(x1, x2) - eps or px > max(x1, x2) + eps or
+                py < min(y1, y2) - eps or py > max(y1, y2) + eps):
+            return False
+
+        cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1)
+        return abs(cross) <= eps
+
+    # Ray casting algorithm (robuste)
     n = len(vertices)
     inside = False
     
     p1x, p1y = vertices[0]
     for i in range(1, n + 1):
         p2x, p2y = vertices[i % n]
+
+        # Inclure explicitement les bords et sommets du polygone
+        if _point_on_segment(point_x, point_y, p1x, p1y, p2x, p2y):
+            return True
         
-        # Vérifier si le rayon horizontal du point traverse cet edge
+        # Vérifier si le rayon horizontal du point croise cet edge
+        # Inclure la limite supérieure mais exclure la limite inférieure
+        # pour éviter de compter deux fois les vertex
         if point_y > min(p1y, p2y):
             if point_y <= max(p1y, p2y):
                 if point_x <= max(p1x, p2x):
                     # Calculer l'intersection x du rayon avec l'edge
-                    if p1y != p2y:
+                    if p1y != p2y:  # Edge n'est pas horizontal
                         xinters = (point_y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or point_x <= xinters:
-                        inside = not inside
+                        if p1x == p2x or point_x <= xinters:
+                            inside = not inside
         
         p1x, p1y = p2x, p2y
     
@@ -83,6 +105,9 @@ def euclidean_distance(p1: tuple[float, float], p2: tuple[float, float]) -> floa
 # ------------------------------------------------------------
 # RÈGLES D'ANALYSE COMPORTEMENTALE
 # ------------------------------------------------------------
+
+# Timers pour validation temporelle des chutes: {track_id: datetime_debut_supine}
+_fall_timers: dict = {}
 
 def detect_intrusion(detections: list[Detection], camera_id: str, zones: list[Zone] = None) -> list[Alert]:
     """
@@ -105,8 +130,19 @@ def detect_intrusion(detections: list[Detection], camera_id: str, zones: list[Zo
                if d.class_id == PERSON_CLASS
                and d.confidence >= CONFIDENCE_MIN_DETECTION]
 
+    # Frame dimensions used for normalization (pixels)
+    frame_w = 1280.0
+    frame_h = 720.0
+
     for person in persons:
         cx, cy = person.bbox.center
+        # Normalize center coordinates to 0.0-1.0 before polygon check
+        try:
+            nx = float(cx) / frame_w
+            ny = float(cy) / frame_h
+        except Exception:
+            nx = float(cx)
+            ny = float(cy)
         
         # Vérifier dans chaque zone active
         for zone in zones:
@@ -114,13 +150,13 @@ def detect_intrusion(detections: list[Detection], camera_id: str, zones: list[Zo
                 continue
             
             # Ray Casting: vérifier si le centre est dans ce polygone
-            if point_in_polygon(cx, cy, zone.points):
+            if point_in_polygon(nx, ny, zone.points):
                 alerts.append(Alert(
                     camera_id        = camera_id,
                     alert_type       = AlertType.INTRUSION,
                     description      = (
                         f"Personne détectée dans '{zone.name}' "
-                        f"(centre: {cx:.0f},{cy:.0f}) "
+                        f"(centre: {int(cx)},{int(cy)}) "
                         f"[track_id={person.track_id}]"
                     ),
                     confidence_score = round(person.confidence, 3),
@@ -148,24 +184,42 @@ def detect_fall(detections: list[Detection], camera_id: str) -> list[Alert]:
                and d.confidence >= CONFIDENCE_MIN_DETECTION]
 
     for person in persons:
+        track_id = person.track_id
         ratio = person.bbox.aspect_ratio
-        if ratio > FALL_RATIO_THRESHOLD:
-            # Score de confiance pondéré par la conf YOLO et le ratio
+        posture = person.posture
+
+        # Condition 1: ratio > FALL_RATIO_THRESHOLD
+        if ratio <= FALL_RATIO_THRESHOLD:
+            _fall_timers.pop(track_id, None)
+            continue
+
+        # Condition 2: posture == 'Supine'
+        if posture != 'Supine':
+            _fall_timers.pop(track_id, None)
+            continue
+
+        # Condition 3: timer > 5 secondes
+        if track_id not in _fall_timers:
+            _fall_timers[track_id] = datetime.now()
+            continue
+
+        duree = (datetime.now() - _fall_timers[track_id]).total_seconds()
+        if duree >= 5:
+            # Générer alerte chute
             conf = min(1.0, round(person.confidence * (ratio / 2.0), 3))
             alerts.append(Alert(
                 camera_id        = camera_id,
                 alert_type       = AlertType.CHUTE,
                 description      = (
-                    f"Chute possible — ratio w/h={ratio:.2f} "
-                    f"(seuil={FALL_RATIO_THRESHOLD}) "
-                    f"[track_id={person.track_id}]"
+                    f"Chute confirmée — ratio w/h={ratio:.2f} "
+                    f"(seuil={FALL_RATIO_THRESHOLD}) [track_id={track_id}]"
                 ),
                 confidence_score = conf,
                 detection_info   = [person],
             ))
-            logger.warning(
-                f"🚨 CHUTE possible — track_id={person.track_id} ratio={ratio:.2f}"
-            )
+            logger.warning(f"🚨 CHUTE confirmée — track_id={track_id} duree={duree:.1f}s ratio={ratio:.2f}")
+            # Reset timer après alerte pour éviter spam
+            _fall_timers.pop(track_id, None)
 
     return alerts
 
@@ -270,9 +324,9 @@ def analyze_behavior(frame_data: FrameData, zones: list[Zone] = None) -> list[Al
     if not detections:
         return all_alerts
     # 🔍 DEBUG : Afficher TOUTES les détections
-    logger.info(f"📊 Total détections : {len(detections)}")
+    logger.debug(f"📊 Total détections : {len(detections)}")
     for i, det in enumerate(detections):
-        logger.info(
+        logger.debug(
             f"  [{i}] class_id={det.class_id} ({det.class_name}) | "
             f"conf={det.confidence:.3f} | "
             f"track_id={det.track_id}"
@@ -282,12 +336,12 @@ def analyze_behavior(frame_data: FrameData, zones: list[Zone] = None) -> list[Al
     persons = [d for d in detections
                if d.class_id == PERSON_CLASS
                and d.confidence >= CONFIDENCE_MIN_DETECTION]
-    logger.info(
+    logger.debug(
         f"👥 Personnes filtrées : {len(persons)} "
         f"(confiance >= {CONFIDENCE_MIN_DETECTION})"
     )
     for p in persons:
-        logger.info(f"  - track_id={p.track_id} conf={p.confidence:.3f}")
+        logger.debug(f"  - track_id={p.track_id} conf={p.confidence:.3f}")
 
 
     all_alerts += detect_intrusion(detections, camera_id, zones=zones)
@@ -302,7 +356,7 @@ def analyze_behavior(frame_data: FrameData, zones: list[Zone] = None) -> list[Al
             f"{len(all_alerts)} alerte(s)"
         )
     else:
-        logger.warning(
+        logger.debug(
             f"[Frame {frame_data.frame_id}] "
             f"{len(detections)} détections → "
             f"AUCUNE alerte générée ❌"

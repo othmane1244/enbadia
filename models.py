@@ -60,6 +60,7 @@ class Detection(BaseModel):
     class_id:   int             = Field(..., ge=0, lt=80)
     class_name: str             = Field(..., min_length=1)
     confidence: float           = Field(..., ge=0.0, le=1.0)
+    posture:    Optional[str]   = Field(None, description="Posture estimée: Supine/Not_Supine")
     bbox:       BoundingBox
 
 

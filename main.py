@@ -75,17 +75,17 @@ _video_frame_size = (1280, 720)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / Shutdown de l'application."""
-    logger.info("🚀 Surveillance API démarrée")
-    logger.info("   Endpoints disponibles :")
-    logger.info("     POST /process_frame/    — recevoir détections")
-    logger.info("     POST /video/frame       — recevoir frames vidéo")
-    logger.info("     GET  /alerts/           — historique alertes")
-    logger.info("     GET  /health/           — état du serveur")
-    logger.info("     WS   /ws/alerts         — stream alertes temps réel")
-    logger.info("     WS   /ws/video          — stream vidéo temps réel")
+    logger.debug("🚀 Surveillance API démarrée")
+    logger.debug("   Endpoints disponibles :")
+    logger.debug("     POST /process_frame/    — recevoir détections")
+    logger.debug("     POST /video/frame       — recevoir frames vidéo")
+    logger.debug("     GET  /alerts/           — historique alertes")
+    logger.debug("     GET  /health/           — état du serveur")
+    logger.debug("     WS   /ws/alerts         — stream alertes temps réel")
+    logger.debug("     WS   /ws/video          — stream vidéo temps réel")
     
     # Charger les zones d'intrusion au démarrage
-    logger.info("📍 Chargement des zones d'intrusion depuis Supabase...")
+    logger.debug("📍 Chargement des zones d'intrusion depuis Supabase...")
     zones_data = await fetch_zones()
     
     # Convertir au format Zone
@@ -102,9 +102,9 @@ async def lifespan(app: FastAPI):
     
     app.state.zones = zones
     if zones:
-        logger.info(f"✅ {len(zones)} zone(s) chargée(s) avec succès")
+        logger.debug(f"✅ {len(zones)} zone(s) chargée(s) avec succès")
         for z in zones:
-            logger.info(f"   - {z.name} ({z.camera_id})")
+            logger.debug(f"   - {z.name} ({z.camera_id})")
     else:
         logger.warning("⚠️  Aucune zone active trouvée dans Supabase")
     

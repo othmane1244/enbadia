@@ -32,11 +32,11 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.add(websocket)
-        logger.info(f"WS connecté — total: {len(self.active_connections)}")
+        logger.debug(f"WS connecté — total: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.discard(websocket)
-        logger.info(f"WS déconnecté — total: {len(self.active_connections)}")
+        logger.debug(f"WS déconnecté — total: {len(self.active_connections)}")
 
     async def broadcast(self, message: dict):
         """Envoie un message JSON à tous les clients connectés."""
@@ -81,7 +81,7 @@ def get_supabase_client():
     try:
         from supabase import create_client
         client = create_client(url, key)
-        logger.info("✅ Supabase connecté")
+        logger.debug("✅ Supabase connecté")
         return client
     except ImportError:
         logger.warning("⚠️  Package supabase non installé — mode simulation")
@@ -135,7 +135,7 @@ async def send_telegram_alert(alert: Alert) -> bool:
     try:
         ok = await _should_send_telegram_for_alert(alert)
         if not ok:
-            logger.info("🔕 Telegram cooldown actif — notification ignorée")
+            logger.debug("🔕 Telegram cooldown actif — notification ignorée")
             return False
 
         when = alert.timestamp.isoformat()
@@ -164,7 +164,7 @@ async def send_telegram_alert(alert: Alert) -> bool:
                 else:
                     key = f"type:{alert.alert_type}:cam:{alert.camera_id}"
                 _last_telegram_sent[key] = datetime.utcnow()
-                logger.info("✅ Telegram envoyé")
+                logger.debug("✅ Telegram envoyé")
                 return True
 
             logger.error(f"❌ Erreur Telegram {r.status_code}: {r.text}")
@@ -199,7 +199,7 @@ async def insert_alert(alert: Alert) -> bool:
     if _supabase is None:
         # Mode simulation — stockage local
         _local_alert_buffer.append(alert_dict)
-        logger.info(
+        logger.debug(
             f"[SIMULATION] Alerte sauvegardée localement "
             f"({len(_local_alert_buffer)} total) : {alert.alert_type}"
         )
@@ -212,7 +212,7 @@ async def insert_alert(alert: Alert) -> bool:
             None,
             lambda: _supabase.table("alerts").insert(alert_dict).execute()
         )
-        logger.info(f"✅ Alerte insérée Supabase : {alert.alert_type} [{alert.id[:8]}]")
+        logger.debug(f"✅ Alerte insérée Supabase : {alert.alert_type} [{alert.id[:8]}]")
         return True
 
     except Exception as e:
@@ -241,7 +241,7 @@ async def insert_zone(zone: ZoneCreate) -> bool:
             None,
             lambda: _supabase.table("zones").insert(zone_dict).execute()
         )
-        logger.info(f"✅ Zone insérée Supabase : {zone.camera_id}")
+        logger.debug(f"✅ Zone insérée Supabase : {zone.camera_id}")
         return True
     except Exception as e:
         logger.error(f"❌ Erreur insert zone Supabase : {e}")
@@ -280,7 +280,7 @@ async def fetch_zones(camera_id: str = None) -> list[dict]:
                 "zone_id": z.get("id"),
             })
         
-        logger.info(f"✅ {len(formatted)} zone(s) chargée(s) de Supabase")
+        logger.debug(f"✅ {len(formatted)} zone(s) chargée(s) de Supabase")
         return formatted
         
     except Exception as e:
@@ -299,7 +299,7 @@ async def broadcast_alert(alert: Alert):
         "timestamp": datetime.utcnow().isoformat(),
     }
     await manager.broadcast(payload)
-    logger.info(
+    logger.debug(
         f"📡 Alerte broadcastée à {len(manager.active_connections)} client(s) WS"
     )
     try:

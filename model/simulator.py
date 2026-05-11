@@ -20,6 +20,11 @@ from datetime import datetime, timezone
 from ultralytics import YOLO
 from database import fetch_zones
 
+# Posture model (T1) path
+POSTURE_MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "T1", "test_model_detection", "weights", "best.pt"))
+# lazy-loaded posture model
+posture_model = None
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -171,6 +176,7 @@ def draw_annotations(frame, results, frame_id, zones=None):
 
 
 async def main():
+    global posture_model
     logger.info("=== Simulateur YOLO + Vidéo ===")
     logger.info(f"  Modèle YOLO: {YOLO_MODEL}")
     logger.info(f"  API Détections: {API_URL}")
@@ -190,7 +196,7 @@ async def main():
         logger.info(f"✅ Modèle YOLO chargé: {YOLO_MODEL}")
     except Exception as e:
         logger.error(f"❌ Erreur chargement modèle YOLO: {e}")
-        logger.info("  Utilisation du mode vidéo sans détections...")
+        logger.debug("  Utilisation du mode vidéo sans détections...")
         model = None
 
     # Ouvrir la webcam
@@ -229,6 +235,42 @@ async def main():
                             cls_id = int(box.cls[0])
                             confidence = float(box.conf[0])
                             
+                            # Par défaut, pas de posture
+                            posture_label = "Not_Supine"
+
+                            # Si personne détectée, lancer le modèle de posture (T1)
+                            if cls_id == 0:
+                                try:
+                                    # Charger le modèle posture si nécessaire
+                                    if posture_model is None:
+                                        if os.path.exists(POSTURE_MODEL_PATH):
+                                            posture_model = YOLO(POSTURE_MODEL_PATH)
+                                            logger.info(f"✅ Modèle posture chargé: {POSTURE_MODEL_PATH}")
+                                        else:
+                                            logger.warning(f"Modèle posture introuvable: {POSTURE_MODEL_PATH}")
+
+                                    if posture_model is not None:
+                                        # Crop safe
+                                        hx1, hy1 = max(0, x1), max(0, y1)
+                                        hx2, hy2 = max(1, x2), max(1, y2)
+                                        crop = frame[hy1:hy2, hx1:hx2]
+                                        if crop.size != 0:
+                                            try:
+                                                pres = posture_model(crop, imgsz=224, conf=0.25)
+                                                if pres and len(pres) > 0 and pres[0].boxes is not None and len(pres[0].boxes) > 0:
+                                                    pid = int(pres[0].boxes.cls[0])
+                                                    pname = pres[0].names[pid] if pres[0].names is not None and pid < len(pres[0].names) else str(pid)
+                                                    if isinstance(pname, str) and "supine" in pname.lower():
+                                                        posture_label = "Supine"
+                                                    else:
+                                                        posture_label = "Not_Supine"
+                                                else:
+                                                    posture_label = "Not_Supine"
+                                            except Exception as e:
+                                                logger.debug(f"Erreur posture model inference: {e}")
+                                except Exception as e:
+                                    logger.debug(f"Erreur chargement posture model: {e}")
+
                             detections.append({
                                 "track_id": int(box.id[0]) if box.id is not None else None,
                                 "class_id": cls_id,
@@ -239,7 +281,8 @@ async def main():
                                     "y1": y1,
                                     "x2": x2,
                                     "y2": y2,
-                                }
+                                },
+                                "posture": posture_label,
                             })
                 except Exception as e:
                     logger.warning(f"⚠️ Erreur inférence YOLO: {e}")
@@ -252,7 +295,7 @@ async def main():
             if success:
                 frames_sent += 1
                 if frames_sent % 30 == 0:
-                    logger.info(f"📹 {frames_sent} frames envoyées")
+                    logger.debug(f"📹 {frames_sent} frames envoyées")
 
             # Envoyer les détections à l'API (1 sur SEND_EVERY_N)
             if frame_id % SEND_EVERY_N == 0 and detections:
