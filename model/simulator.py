@@ -16,9 +16,11 @@ import asyncio
 import httpx
 import base64
 import logging
+import time
 from datetime import datetime, timezone
 from ultralytics import YOLO
 from database import fetch_zones
+from metrics_collector import get_metrics_collector
 
 # Posture model (T1) path
 POSTURE_MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), "T1", "test_model_detection", "weights", "best.pt"))
@@ -74,17 +76,30 @@ async def send_video_frame(client: httpx.AsyncClient, frame: cv2.Mat, frame_id: 
 
 async def send_detections_to_api(client: httpx.AsyncClient, frame_data: dict) -> int:
     """Envoie les détections à l'API pour analyse comportementale."""
+    metrics = get_metrics_collector()
+    frame_record = metrics.record_frame_sent(frame_data["frame_id"])
+    
     try:
         resp = await client.post(API_URL, json=frame_data, timeout=2.0)
         if resp.status_code == 200:
             data = resp.json()
             n = len(data.get("alerts_generated", []))
+            
+            # Enregistrer les métriques
+            metrics.record_frame_received(frame_record)
+            
             if n > 0:
                 for alert in data["alerts_generated"]:
                     logger.warning(
                         f"🚨 ALERTE [{alert['alert_type']}] "
                         f"{alert['description'][:60]} "
                         f"(conf={alert['confidence_score']:.2f})"
+                    )
+                    # Enregistrer l'alerte
+                    metrics.record_alert(
+                        alert["alert_type"],
+                        alert["confidence_score"],
+                        frame_data["frame_id"]
                     )
             return n
         else:
@@ -177,6 +192,9 @@ def draw_annotations(frame, results, frame_id, zones=None):
 
 async def main():
     global posture_model
+    metrics = get_metrics_collector()
+    metrics.start()
+    
     logger.info("=== Simulateur YOLO + Vidéo ===")
     logger.info(f"  Modèle YOLO: {YOLO_MODEL}")
     logger.info(f"  API Détections: {API_URL}")
@@ -323,6 +341,12 @@ async def main():
 
     cap.release()
     cv2.destroyAllWindows()
+    
+    # Finaliser la collecte de métriques
+    metrics.end()
+    metrics.save_to_file()
+    metrics.print_summary()
+    
     logger.info(f"\n✅ Simulation terminée — {frame_id} frames, {frames_sent} envoyées, {api_alerts} alertes")
 
 
