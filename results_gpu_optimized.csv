@@ -1,0 +1,1 @@
+timestamp,frame_idx,infer_ms,total_ms,cpu_percent,mem_rss_mb,gpu_util,gpu_mem_mb,batch_size
